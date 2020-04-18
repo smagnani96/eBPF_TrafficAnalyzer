@@ -1,0 +1,24 @@
+{
+    "name": "Packets feature extractor",
+    "code": "",
+    "metrics": [
+        {
+            "name": "index_counter",
+            "map-name": "INDEX_COUNTER",
+            "open-metrics-metadata": {
+                "help": "This metric represents the index of the last packet.",
+                "type": "counter",
+                "labels": []
+            }
+        },
+        {
+            "name": "packet_info",
+            "map-name": "PACKET_INFO",
+            "open-metrics-metadata": {
+                "help": "This metric represents the packets' features.",
+                "type": "counter", //Are we sure?
+                "labels": []
+            }
+        }
+    ]
+}
