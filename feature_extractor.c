@@ -3,9 +3,8 @@
  * The aim of this program is to extract some info concerning many packets passing through the interface in order to prevent a possible attack.
  * By now the following protocols are checked:
  *  - TCP
- *  - UDP
- *  - ICMP
- * It still lacks of decision making about which TCP session should be tracked (WIP).
+ *  [- UDP]
+ *  [- ICMP]
  */
 /*Protocol types according to standard*/
 #define IPPROTO_TCP 6
@@ -13,8 +12,9 @@
 #define IPPROTO_ICMP 1
 
 /*Own control variables*/
-#define N_PACKET 20
+#define N_PACKET 5000
 #define N_SESSION 10240
+#define RESTART_TIME 10000000000
 
 /*TCP-SESSION identifier*/
 struct tcp_session {
@@ -29,9 +29,11 @@ struct capture_info {
     unsigned int feature_map_index;
     unsigned int n_session_tracking;
     uint64_t last_ins_tstamp;
-    struct tcp_session tracked_sessions[N_SESSION];
 } __attribute__((packed));
 
+struct tracked_sessions {
+    struct tcp_session list[N_SESSION];
+} __attribute__((packed));
 
 /*Features to be exported*/
 struct features {
@@ -78,7 +80,7 @@ struct iphdr {
     __be32  saddr;
     __be32  daddr;
     /*The options start here. */
-};
+} __attribute__((packed));
 
 /*TCP Header*/
 struct tcphdr {
@@ -114,7 +116,7 @@ struct tcphdr {
     __be16  window;
     __sum16 check;
     __be16  urg_ptr;
-};
+} __attribute__((packed));
 
 /*UDP Header*/
 struct udphdr {
@@ -122,7 +124,7 @@ struct udphdr {
     __be16  dest;
     __be16  len;
     __sum16 check;
-};
+} __attribute__((packed));
 
 /*ICMP Header*/
 struct icmphdr {
@@ -141,8 +143,9 @@ struct icmphdr {
     } frag;
     __u8    reserved[4];
   } un;
-};
+} __attribute__((packed));
 
+/*Example of empty structured used to initialize others*/
 static struct tcp_session EmptyStruct;
 
 /*Structures shared between Control Plane - Data Plane*/
@@ -150,6 +153,7 @@ BPF_ARRAY(CAPTURE_INFO, struct capture_info, 1);
 BPF_ARRAY(PACKET_FEATURE_MAP, struct features, N_PACKET);
 /*Internal structure to check whether a session is tracked or not*/
 BPF_HASH(TCP_SESSIONS_TRACKED, struct tcp_session, u64, N_SESSION);
+BPF_ARRAY(TCP_SESSION_HELPER, struct tracked_sessions, 1);
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
     void *data = (void *) (long) ctx->data;
@@ -182,13 +186,19 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     	return RX_OK;
  	}
 
+    /*Retrieving tcp tracked session helper*/
+    struct tracked_sessions *t_sess =  TCP_SESSION_HELPER.lookup(&key);
+    if (!t_sess){
+        return RX_OK;
+    }
+
     /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
     uint64_t curr_time = ctx->tstamp == 0? bpf_ktime_get_ns() : ctx->tstamp;
 
     /*Checking if array of captured packets is full*/
     if(cinfo->feature_map_index == N_PACKET) {
         /*Checking if last insertion happened 10s ago*/
-        if(curr_time - cinfo->last_ins_tstamp < 10000000000) {
+        if(curr_time - cinfo->last_ins_tstamp < RESTART_TIME) {
             pcn_log(ctx, LOG_TRACE, "Number of packet to be stored reached!");
             return RX_OK;
         }
@@ -198,8 +208,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         /*TODO: dig deeper for BPF_MAP_TYPE_LRU_HASH*/
         if(cinfo->n_session_tracking == N_SESSION) {
             for(int i=0; i<N_SESSION; i++) {
-                TCP_SESSIONS_TRACKED.delete(&cinfo->tracked_sessions[i]);
-                cinfo->tracked_sessions[i] = EmptyStruct;
+                TCP_SESSIONS_TRACKED.delete(&t_sess->list[i]);
+                t_sess->list[i] = EmptyStruct;
             }
             cinfo->n_session_tracking = 0;
         }
@@ -233,7 +243,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
                 TCP_SESSIONS_TRACKED.insert(&session, &val);
                 /*Always true but required from compiler*/
                 if(cinfo->n_session_tracking >= 0 && cinfo->n_session_tracking < N_SESSION) {
-                    cinfo->tracked_sessions[cinfo->n_session_tracking] = session;
+                    t_sess->list[cinfo->n_session_tracking] = session;
                 }
                 cinfo->n_session_tracking+=1;
                 pcn_log(ctx, LOG_TRACE, "New tracked session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
