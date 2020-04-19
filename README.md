@@ -6,7 +6,7 @@ Highly recommended to be used within the [Polycube](https://github.com/polycube-
 
 ## Tcp traffic Analyzer
 
-This section covers the main feature of this project, the program [feature\_extractor\_tcp.c](./feature_extractor_tcp.c).
+This section covers the main feature of this project, the program [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c).
 
 It is used to extract information concerning some TCP connection passing through the network interface.
 
@@ -30,7 +30,7 @@ to flush entries using for example a `LRU` map, deleting all the entries older t
 
 ## Multiprotocol traffic Analyzer (WIP)
 
-This part refers to [feature\_extractor\_all.c](./feature_extractor_all.c) program.
+This part refers to [feature\_extractor\_all.c](./src/feature_extractor_all.c) program.
 
 This is still a work in progress program which will be developed later.
 
@@ -39,19 +39,19 @@ This is still a work in progress program which will be developed later.
 Thanks to the [Dynmon](https://polycube-network.readthedocs.io/en/latest/services/pcn-dynmon/dynmon.html) service recently integrated in the framework, users
 are able to inject dynamically new eBPB code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
 
-Using the [dymon\_injector.py](./dynmon_injector.py) script (src. [here](https://github.com/polycube-network/polycube/blob/master/src/services/pcn-dynmon/tools/dynmon_injector.py>)) a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations
-it has gathered. But what information? Those we tell the probe to gather. In fact in the [feature_extractor.json](./feature_extractor.json) file users not only insert their own code, but they also specify which metrics should be exported by the service.
+Using the [dymon\_injector.py](./tools/dynmon_injector.py) script (src. [here](https://github.com/polycube-network/polycube/blob/master/src/services/pcn-dynmon/tools/dynmon_injector.py>)) a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations
+it has gathered. But what information? Those we tell the probe to gather. In fact in the [feature_extractor.json](./src/feature_extractor.json) file users not only insert their own code, but they also specify which metrics should be exported by the service.
 
-The injectable code should be formatted and escaped accordingly to JSON format. To achieved that, an apposite python [formatter.py](./formatter.py) script has been created.
+The injectable code should be formatted and escaped accordingly to JSON format. To achieved that, an apposite python [formatter.py](./tools/formatter.py) script has been created.
 
 To extract the metrics from the monitor, there are multiple options, but the two most relevant are the following:
 
 * querying the polycube daemon via command line interface (`polycubectl <monitor_name> show metrics`);
-* using the python [dynmon\_extractor.py](./dynmon_extractor.py), which will automatically stores all the information in files.
+* using the python [dynmon\_extractor.py](./tools/dynmon_extractor.py), which will automatically stores all the information in files.
 
 ## Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [feature\_extractor\_tcp.c](./feature_extractor_tcp.c) example.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c) example.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 
@@ -63,12 +63,12 @@ In the code, you can use all data structures eBPF offers you. Later you can deci
 
 ### Step2 - Format code
 
-Once finished your program, you should escape it to be inserted inside the [feature\_extractor.json](./feature_extractor.json) file under the `"code"` field. 
+Once finished your program, you should escape it to be inserted inside the [feature\_extractor.json](./src/feature_extractor.json) file under the `"code"` field. 
 Moreover, you should also specify in this file all the metrics (also OpenMetrics is supported) to be exported between the service and the outside world.
 
 All the metrics `map_name` should refer to existing map you have previously declared in your eBPF C code, otherwise it will not be found.
 
-To format the file, you can use my [formatter.py](./formatter.py) script:
+To format the file, you can use my [formatter.py](./tools/formatter.py) script:
 
 ```bash
 ~$  ./formatter.py <your_code_filename.c>
@@ -76,7 +76,7 @@ To format the file, you can use my [formatter.py](./formatter.py) script:
 
 ### Step3 - Inject code
 
-This step consists in inserting your code inside the service. To do that, you can use the [dynmon\_injector.py](./dynmon_injector.py) script:
+This step consists in inserting your code inside the service. To do that, you can use the [dynmon\_injector.py](./tools/dynmon_injector.py) script:
 
 ```bash
 ~$  ./dynmon_injector.py <monitor_name> <network_interface> <json_filename.json>
@@ -89,7 +89,7 @@ An example could be `./dynmon_injector.py monitor1 br1:port1 feature_extractor.j
 At this point if everything went well the service is already gathering informations ready to be consumed. You can type `polycubectl <monitor_name> show metrics`
 to read results on a command line.
 
-Although, we have though of a [dynmon_extractor.py](./dynmon\_extractor.py) script to retrieve results and to store them in a directory (default `./dump`). Each
+Although, we have though of a [dynmon_extractor.py](./tools/dynmon\_extractor.py) script to retrieve results and to store them in a directory (default `./dump`). Each
 capture is identified by `timestamp__IPSOURCE__IPDEST` name plus the desider format (default `.csv`).
 
 ## Test
@@ -179,7 +179,11 @@ iperf Done.
 ## Pointers
 
 <https://www.freeformatter.com/json-escape.html>
+
 <https://github.com/iovisor/bcc/blob/master/docs/reference_guide.md>
+
 <https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=29ba732acbeece1e34c68483d1ec1f3720fa1bb3>
+
 <https://support.cumulusnetworks.com/hc/en-us/articles/216509388-Throughput-Testing-and-Troubleshooting>
+
 <https://iris.polito.it/retrieve/handle/11583/2712562/207457/18HPSR-ebpf-lessons-learned.pdf>
