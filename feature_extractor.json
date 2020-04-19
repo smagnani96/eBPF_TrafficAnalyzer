@@ -3,8 +3,8 @@
     "code": "",
     "metrics": [
         {
-            "name": "index_counter",
-            "map-name": "INDEX_COUNTER",
+            "name": "CAPTURE_INFO",
+            "map-name": "CAPTURE_INFO",
             "open-metrics-metadata": {
                 "help": "This metric represents the index of the last packet.",
                 "type": "counter",
@@ -12,11 +12,11 @@
             }
         },
         {
-            "name": "packet_info",
-            "map-name": "PACKET_INFO",
+            "name": "PACKET_FEATURE_MAP",
+            "map-name": "PACKET_FEATURE_MAP",
             "open-metrics-metadata": {
                 "help": "This metric represents the packets' features.",
-                "type": "counter", //Are we sure?
+                "type": "counter",
                 "labels": []
             }
         }
