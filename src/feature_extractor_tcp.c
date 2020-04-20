@@ -7,23 +7,30 @@
 #define IPPROTO_TCP 6
 
 /*Own control variables*/
-#define N_PACKET 10000
-#define N_SESSION 10240
-#define RESTART_TIME 10000000000
+#define N_PACKET             10000          // Buffer size (total packet stored)
+#define N_SESSION            10240          // Number of max TCP session tracked
+#define N_PACKET_PER_SESSION 100            // Number of packet from the same TCP session
+#define PACKET_RESTART_TIME  5000000000     //  Number of seconds to wait before resetting the buffer (5 seconds)
+#define SESSION_RESTART_TIME 1000000000     // Seconds to wait before tracking packets from an already tracked session
 
 /*TCP-SESSION identifier*/
-struct tcp_session {
-    __be32  saddr;
-    __be32  daddr;
-    __be16  sport;
-    __be16  dport;
+struct tcp_session_key {
+    __be32  saddr;               //IP source address
+    __be32  daddr;               //IP dest address
+    __be16  sport;               //TCP source port
+    __be16  dport;               //TCP dest port
+} __attribute__((packed));
+
+struct tcp_session_value {
+    uint64_t last_ins_tstamp;    // Timestampt of last inserted packet for that session
+    uint32_t n_packets;          // Number of packed tracked for that session
 } __attribute__((packed));
 
 /*Structure containing info about capture and valid indexes*/
 struct capture_info {
-    unsigned int feature_map_index;
-    unsigned int n_session_tracking;
-    uint64_t last_ins_tstamp;
+    unsigned int feature_map_index;     // Buffer index
+    unsigned int n_session_tracking;    // Number of actual tracked sessions
+    uint64_t last_ins_tstamp;           // Timestampt of the last tracked packet
 } __attribute__((packed));
 
 /*Features to be exported*/
@@ -37,6 +44,8 @@ struct features {
     uint32_t tcp_ack;       //TCP ack n°
     uint8_t  tcp_flags;     //TCP flags
     uint16_t tcp_win;       //TCP window value
+    uint8_t udp_len;        //UDP payload length
+    uint8_t  icmp_type;     //ICMP operation type
 } __attribute__((packed));
 
 /*Ethernet Header*/
@@ -109,7 +118,7 @@ struct tcphdr {
 BPF_ARRAY(CAPTURE_INFO, struct capture_info, 1);
 BPF_ARRAY(PACKET_FEATURE_MAP, struct features, N_PACKET);
 /*Tracked session map*/
-BPF_TABLE("lru_hash", struct tcp_session, u8, TCP_SESSIONS_TRACKED, N_SESSION);
+BPF_TABLE("lru_hash", struct tcp_session_key, struct tcp_session_value, TCP_SESSIONS_TRACKED, N_SESSION);
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
     void *data = (void *) (long) ctx->data;
@@ -160,7 +169,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     /*Checking if array of captured packets is full*/
     if(cinfo->feature_map_index == N_PACKET) {
         /*Checking if last insertion happened 10s ago*/
-        if(curr_time - cinfo->last_ins_tstamp < RESTART_TIME) {
+        if(curr_time - cinfo->last_ins_tstamp < PACKET_RESTART_TIME) {
             return RX_OK;
         }
         /*Reset head to zero to start extracting packet feature again*/
@@ -174,17 +183,26 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
  	}
 
     /*Check if it is already tracked*/
-    struct tcp_session session = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest};
-    u8 *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
-    if(!is_tracked) {
+    struct tcp_session_key session = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest};
+    struct tcp_session_value *value = TCP_SESSIONS_TRACKED.lookup(&session);
+    if(!value) {
         /*Increase tracked sessions and store current one in map*/
-        u8 val = 1;
+        struct tcp_session_value val = {.last_ins_tstamp=curr_time, .n_packets=1};
         TCP_SESSIONS_TRACKED.insert(&session, &val);
         cinfo->n_session_tracking+=1;
-    }/* else {
-        //Don't know actually what to do with that counter
-        *is_tracked+=1;
-    }*/
+    } else {
+        /*Checking if reached number of packets per session stored*/
+        if(value->n_packets == N_PACKET_PER_SESSION) {
+            /*Checking if passed enough time*/
+            if(curr_time - value->last_ins_tstamp < SESSION_RESTART_TIME) {
+                return RX_OK;
+            }
+            /*This session is still active, already reached number of tracked packets but long time ago => reset the counter */
+            value->n_packets = 0;
+        }
+        value->last_ins_tstamp = curr_time;
+        value->n_packets+=1;
+    }
     
     /*Updating time of last insertion*/
     cinfo->last_ins_tstamp = curr_time;

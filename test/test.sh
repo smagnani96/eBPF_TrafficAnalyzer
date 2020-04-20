@@ -53,7 +53,7 @@ function main {
 	../tools/dynmon_injector.py monitor br1:port1 test.json
 	sleep 1
 
-	sudo ip netns exec ns2 iperf3 -s &
+	sudo ip netns exec ns2 iperf3 -s &>/dev/null &
   sleep 1
 
   n_connections=1

@@ -14,6 +14,8 @@ POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 5 #seconds
 OUTPUT_DIR = 'dump'
 FILE_FORMAT = 'csv'
+CAPTURE_INFO_MAP_NAME = "CAPTURE_INFO"
+PACKET_FEATURE_MAP_NAME = "PACKET_FEATURE_MAP"
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 
@@ -21,12 +23,15 @@ def main():
 	global polycubed_endpoint
 
 	args = parseArguments()
-	
+
 	addr = args['address']
 	port = args['port']
 	cube_name = args['cube_name']
 	output_dir = args['output']
 	file_format = args['file_format']
+
+	capture_map_name = args['capture_map_name']
+	packet_feature_map_name = args['packet_feature_map_name']
 
 	polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
@@ -46,12 +51,12 @@ def main():
 
 	for metric in metrics:
 		value = json.loads(metric['value'])
-		if metric['name'] == 'CAPTURE_INFO':
+		if metric['name'] == capture_map_name:
 			entry_index = int(value['feature_map_index'])
 			print('Information concerning the actual capture')
 			print('\tEntryValidIndex: 0-{}'.format(value['feature_map_index']))
 			print('\tSessionTracked: {}'.format(value['n_session_tracking']))
-		elif metric['name'] == 'PACKET_FEATURE_MAP':
+		elif metric['name'] == packet_feature_map_name:
 			for i in range(entry_index):
 				timestamp = value[i]['timestamp']
 				saddr = socket.inet_ntoa(struct.pack('!L', value[i]['saddr']))
@@ -62,6 +67,8 @@ def main():
 				tcp_ack = value[i]['tcp_ack']
 				tcp_flags = value[i]['tcp_flags']
 				tcp_win = value[i]['tcp_win']
+				udp_len = value[i].get('udp_len', 0)
+				icmp_type = value[i].get('icmp_type', 0)
 				file = open(f'{output_dir}/{timestamp}__{saddr}__{daddr}.{file_format}', 'w')
 				file.write(f"Timestamp,\t{timestamp}\n")
 				file.write(f"Length,\t{length}\n")
@@ -74,18 +81,6 @@ def main():
 				file.write(f"ICMP type,\t0")
 				file.write
 				file.close()
-				'''
-				print('Packet info:')
-				print('\tTimestamp: {}'.format(value[i]['timestamp']))
-				print('\tIp src: {}'.format(socket.inet_ntoa(struct.pack('!L', value[i]['saddr']))))
-				print('\tIp dst: {}'.format(socket.inet_ntoa(struct.pack('!L', value[i]['daddr']))))
-				print('\tLength: {}'.format(value[i]['length']))
-				print('\tIpv4 flags: {}'.format(value[i]['ipv4_flags']))
-				print('\tTcp length: {}'.format(value[i]['tcp_len']))
-				print('\tTcp ack: {}'.format(value[i]['tcp_ack']))
-				print('\tTcp flags: {}'.format(value[i]['tcp_flags']))
-				print('\tTcp window: {}'.format(value[i]['tcp_win']))
-				'''
 		else:
 			#Add here for more metric to be parsed
 			print('Ignored metric')
@@ -134,6 +129,8 @@ def parseArguments():
 	parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
 	parser.add_argument('-o', '--output', help='set the output directory', type=str, default=OUTPUT_DIR)
 	parser.add_argument('-f', '--file_format', help='set the output files format', type=str, default=FILE_FORMAT)
+	parser.add_argument('-cm', '--capture_map_name', help='set the capture map name (the same in the json file)', type=str, default=CAPTURE_INFO_MAP_NAME)
+	parser.add_argument('-pm', '--packet_feature_map_name', help='set the packet feature map name (the same in the json file)', type=str, default=PACKET_FEATURE_MAP_NAME)
 	return parser.parse_args().__dict__
 
 
