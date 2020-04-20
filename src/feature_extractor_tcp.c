@@ -173,10 +173,13 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     u8 *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
     if(!is_tracked) {
         /*Increase tracked sessions and store current one in map*/
-        u8 val = 0;
+        u8 val = 1;
         TCP_SESSIONS_TRACKED.insert(&session, &val);
         cinfo->n_session_tracking+=1;
-    }
+    }/* else {
+        //Don't know actually what to do with that counter
+        *is_tracked+=1;
+    }*/
     
     /*Updating time of last insertion*/
     cinfo->last_ins_tstamp = curr_time;
