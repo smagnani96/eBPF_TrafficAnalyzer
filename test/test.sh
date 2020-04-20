@@ -50,11 +50,18 @@ function main {
 	polycubectl connect br1:port2 veth2
 
 	sleep 1
-	../dynmon_injector.py monitor br1:port1 test.json
+	../tools/dynmon_injector.py monitor br1:port1 test.json
 	sleep 1
 
 	sudo ip netns exec ns2 iperf3 -s &
-	sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 10 #-P 5
+  sleep 1
+
+  n_connections=1
+  if [ -n "$1" ]; then
+    n_connections=$1
+  fi
+
+	sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 30 -P $n_connections
 }
 
 main $@

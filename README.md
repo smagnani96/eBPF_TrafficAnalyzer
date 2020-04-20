@@ -4,20 +4,26 @@ Simple eBPF C program to analyze some packets' feature in order to detect (and p
 
 Highly recommended to be used within the [Polycube](https://github.com/polycube-network/polycube) framework.
 
-## Tcp traffic Analyzer
+## Multiprotocol traffic Analyzer (WIP)
 
-This section covers the main feature of this project, the program [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c).
+This section covers the main feature of this project, the [feature\_extractor\_all.c](./src/feature_extractor_all.c) program.
 
-It is used to extract information concerning some TCP connection passing through the network interface.
+This is still a work in progress program which will be developed later.
 
 Two parameters are vital:
 
 * N_PACKET, the number of packet which can hold the metric exported (BPF map)
 * N_SESSION, the number of session whose packets should be taken into account
 
-When booted of course the program does not know which session should start monitoring, so it will consider all passing session if there is enough space.
+The current filtered protocols are:
 
-Every packet belonging to those session is analyzed, and some information are stored in the metric map to be consulted later on.
+* TCP
+* UDP
+* ICMP
+
+When booted of course the program does not have any information about which packet has to be captured or not (if belonging to a TCP session), so it will consider all passing packet if there is enough space.
+
+Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
 When there is no enough space for more packet to be stored the program ignores the following packets for *RESTART_TIME* nanoseconds.
 
@@ -25,11 +31,13 @@ Once *RESTART_TIME* nanoseconds are passed, the program resets the head of the c
 
 Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
 
-## Multiprotocol traffic Analyzer (WIP)
+## Tcp traffic Analyzer
 
-This part refers to [feature\_extractor\_all.c](./src/feature_extractor_all.c) program.
+This section concerns the program [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c).
 
-This is still a work in progress program which will be developed later.
+It is used to extract information concerning some TCP connection passing through the network interface.
+
+All the data structures and logic are the same of the upper section, except that in this program I only cover TCP sessions instead of all the other protocols.
 
 ## Infrastructure Architecture
 
@@ -48,7 +56,7 @@ To extract the metrics from the monitor, there are multiple options, but the two
 
 ## Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c) example.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [feature\_extractor\_all.c](./src/feature_extractor_all.c) example.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 

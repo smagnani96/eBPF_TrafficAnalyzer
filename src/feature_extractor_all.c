@@ -3,8 +3,8 @@
  * The aim of this program is to extract some info concerning many packets passing through the interface in order to prevent a possible attack.
  * By now the following protocols are checked:
  *  - TCP
- *  [- UDP]
- *  [- ICMP]
+ *  - UDP
+ *  - ICMP
  */
 /*Protocol types according to standard*/
 #define IPPROTO_TCP 6
@@ -12,7 +12,7 @@
 #define IPPROTO_ICMP 1
 
 /*Own control variables*/
-#define N_PACKET 5000
+#define N_PACKET 10000
 #define N_SESSION 10240
 #define RESTART_TIME 10000000000
 
@@ -31,25 +31,19 @@ struct capture_info {
     uint64_t last_ins_tstamp;
 } __attribute__((packed));
 
-struct tracked_sessions {
-    struct tcp_session list[N_SESSION];
-} __attribute__((packed));
-
 /*Features to be exported*/
 struct features {
-    uint32_t saddr;
-    uint32_t daddr;
-    uint64_t timestamp;
-    uint16_t length;
-    uint16_t ipv4_flags;
-    uint16_t tcp_len;
-    uint32_t tcp_ack;
-    uint8_t  tcp_flags;
-    uint16_t tcp_win;
-    /*
-    uint8_t udp_len;
-    uint8_t  icmp_type;
-    */
+    uint32_t saddr;         //IP source address
+    uint32_t daddr;         //IP destination address
+    uint64_t timestamp;     //Packet timestamp
+    uint16_t length;        //IP length value
+    uint16_t ipv4_flags;    //IP flags
+    uint16_t tcp_len;       //TCP payload length
+    uint32_t tcp_ack;       //TCP ack n°
+    uint8_t  tcp_flags;     //TCP flags
+    uint16_t tcp_win;       //TCP window value
+    uint8_t udp_len;        //UDP payload length
+    uint8_t  icmp_type;     //ICMP operation type
 } __attribute__((packed));
 
 /*Ethernet Header*/
@@ -145,15 +139,14 @@ struct icmphdr {
   } un;
 } __attribute__((packed));
 
-/*Example of empty structured used to initialize others*/
-static struct tcp_session EmptyStruct;
+/*Structure used as initializer*/
+static const struct features EmptyFeatures;
 
 /*Structures shared between Control Plane - Data Plane*/
 BPF_ARRAY(CAPTURE_INFO, struct capture_info, 1);
 BPF_ARRAY(PACKET_FEATURE_MAP, struct features, N_PACKET);
-/*Internal structure to check whether a session is tracked or not*/
-BPF_HASH(TCP_SESSIONS_TRACKED, struct tcp_session, u64, N_SESSION);
-BPF_ARRAY(TCP_SESSION_HELPER, struct tracked_sessions, 1);
+/*Tracked session map*/
+BPF_TABLE("lru_hash", struct tcp_session, u8, TCP_SESSIONS_TRACKED, N_SESSION);
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
     void *data = (void *) (long) ctx->data;
@@ -180,15 +173,9 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
  	}
 
  	/*Retrieving capture information*/
- 	unsigned int key = 0;
- 	struct capture_info *cinfo = CAPTURE_INFO.lookup(&key);
- 	if (!cinfo){
-    	return RX_OK;
- 	}
-
-    /*Retrieving tcp tracked session helper*/
-    struct tracked_sessions *t_sess =  TCP_SESSION_HELPER.lookup(&key);
-    if (!t_sess){
+    unsigned int key = 0;
+    struct capture_info *cinfo = CAPTURE_INFO.lookup(&key);
+    if (!cinfo){
         return RX_OK;
     }
 
@@ -199,32 +186,21 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     if(cinfo->feature_map_index == N_PACKET) {
         /*Checking if last insertion happened 10s ago*/
         if(curr_time - cinfo->last_ins_tstamp < RESTART_TIME) {
-            pcn_log(ctx, LOG_TRACE, "Number of packet to be stored reached!");
             return RX_OK;
         }
         /*Reset head to zero to start extracting packet feature again*/
         cinfo->feature_map_index = 0;
-        /*If reached max session to be tracked flush the table*/
-        /*TODO: dig deeper for BPF_MAP_TYPE_LRU_HASH*/
-        if(cinfo->n_session_tracking == N_SESSION) {
-            for(int i=0; i<N_SESSION; i++) {
-                TCP_SESSIONS_TRACKED.delete(&t_sess->list[i]);
-                t_sess->list[i] = EmptyStruct;
-            }
-            cinfo->n_session_tracking = 0;
-        }
-        pcn_log(ctx, LOG_TRACE, "Enough time passed, RESTARTING FROM INDEX 0!");
     }
 
     /*Retrieving current features slot*/
- 	struct features *pkt_info =  PACKET_FEATURE_MAP.lookup(&cinfo->feature_map_index);
- 	if (!pkt_info){
-    	return RX_OK;
- 	}
+    struct features *pkt_info =  PACKET_FEATURE_MAP.lookup(&cinfo->feature_map_index);
+    if (!pkt_info){
+        return RX_OK;
+    }
 
-    //calculate ip header length
-    //value to multiply *4
-    //e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte
+    /*Calculating ip header length
+     * value to multiply *4
+     *e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte */
     uint8_t ip_header_len = ip->ihl << 2;   //SHL 2 -> *4 multiply
 
     switch(ip->protocol) {
@@ -236,73 +212,65 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
             }
             /*Check if it is already tracked*/
             struct tcp_session session = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest};
-            uint64_t *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
+            u8 *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
             if(!is_tracked) {
-                /*Check if already tracking enough session*/
-                if(cinfo->n_session_tracking == N_SESSION) {
-                    pcn_log(ctx, LOG_TRACE, "Number of session tracked reached!");
-                    return RX_OK;
-                }
                 /*Increase tracked sessions and store current one in map*/
-                uint64_t val = cinfo->n_session_tracking;
+                u8 val = 1;
                 TCP_SESSIONS_TRACKED.insert(&session, &val);
-                /*Always true but required from compiler*/
-                if(cinfo->n_session_tracking >= 0 && cinfo->n_session_tracking < N_SESSION) {
-                    t_sess->list[cinfo->n_session_tracking] = session;
-                }
                 cinfo->n_session_tracking+=1;
-                pcn_log(ctx, LOG_TRACE, "New tracked session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
-            } else {
-                pcn_log(ctx, LOG_TRACE, "Already tracking session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
-            }
-            
-            /*Updating last inserted packet timestamp*/
-            cinfo->last_ins_tstamp = curr_time;
-
-            /*Setting packet features*/
+            }/* else {
+                //Don't know actually what to do with that counter
+                *is_tracked+=1;
+            }*/
+    
+            /*Now that I'm sure to take this packet reset the structure (could contain old data)*/
+            *pkt_info = EmptyFeatures;
+            pkt_info->length = bpf_ntohs(ip->tot_len);
             pkt_info->tcp_ack = tcp->ack_seq;
  			pkt_info->tcp_win = bpf_ntohs(tcp->window);
- 			pkt_info->tcp_len = (uint16_t)(pkt_info->length - sizeof(struct iphdr) - sizeof(*tcp));
+ 			pkt_info->tcp_len = (uint16_t)(pkt_info->length - ip_header_len - sizeof(*tcp));
  			pkt_info->tcp_flags = (tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4)
  			 					| (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin;
  			break;
     	}
-        default : {
-            return RX_OK;
-        }
-        /*
     	case IPPROTO_ICMP: {
-            //Parsing L4 ICMP
+            /*Parsing L4 ICMP*/
             struct icmphdr *icmp = data + sizeof(struct eth_hdr) + ip_header_len;
             if((void *)icmp + sizeof(*icmp) > data_end) {
                 return RX_OK;
             }
+            /*Now that I'm sure to take this packet reset the structure (could contain old data)*/
+            *pkt_info = EmptyFeatures;
+            pkt_info->length = bpf_ntohs(ip->tot_len);
             pkt_info->icmp_type = icmp->type;
-            pcn_log(ctx, LOG_INFO, "Inserted ICMP packet at index: %d ", *CAPTURE_INFO);
     		break;
         }
     	case IPPROTO_UDP: {
-            //Parsing L4 UDP
+            /*Parsing L4 UDP*/
             struct udphdr *udp = data + sizeof(struct eth_hdr) + ip_header_len;
             if((void *)udp + sizeof(*udp) > data_end) {
                 return RX_OK;
             }
-            pkt_info->udp_len = bpf_ntohs(udp->len);
-            pcn_log(ctx, LOG_INFO, "Inserted UDP packet at index: %d ", *CAPTURE_INFO);
+            /*Now that I'm sure to take this packet reset the structure (could contain old data)*/
+            *pkt_info = EmptyFeatures;
+            pkt_info->length = bpf_ntohs(ip->tot_len);
+            pkt_info->udp_len = bpf_ntohs(udp->len) - sizeof(*udp);
     		break;
-        }*/
+        }
+        /*Should never reach this code since already checked*/
+        default : {
+            return RX_OK;
+        }
     }
 
     /*Setting packet features*/
+    pkt_info->timestamp = curr_time;
     pkt_info->saddr = bpf_ntohl(ip->saddr);
     pkt_info->daddr = bpf_ntohl(ip->daddr);
-    pkt_info->length = bpf_ntohs(ip->tot_len);
     pkt_info->ipv4_flags = bpf_ntohs(ip->frag_off);
-    pkt_info->timestamp = curr_time;
-
-    pcn_log(ctx, LOG_TRACE, "Inserted Packet at index: %u ", cinfo->feature_map_index);
-
-    /*The capture was fine so increase the index*/
+   
+    /*The capture was fine, update last timestamp and index*/
+    cinfo->last_ins_tstamp = curr_time;
     cinfo->feature_map_index+=1;
 
 	return RX_OK;

@@ -28,15 +28,15 @@ struct capture_info {
 
 /*Features to be exported*/
 struct features {
-    uint32_t saddr;
-    uint32_t daddr;
-    uint64_t timestamp;
-    uint16_t length;
-    uint16_t ipv4_flags;
-    uint16_t tcp_len;
-    uint32_t tcp_ack;
-    uint8_t  tcp_flags;
-    uint16_t tcp_win;
+    uint32_t saddr;         //IP source address
+    uint32_t daddr;         //IP destination address
+    uint64_t timestamp;     //Packet timestamp
+    uint16_t length;        //IP length value
+    uint16_t ipv4_flags;    //IP flags
+    uint16_t tcp_len;       //TCP payload length
+    uint32_t tcp_ack;       //TCP ack n°
+    uint8_t  tcp_flags;     //TCP flags
+    uint16_t tcp_win;       //TCP window value
 } __attribute__((packed));
 
 /*Ethernet Header*/
@@ -136,9 +136,9 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
  		return RX_OK;
  	}
 
-    //calculate ip header length
-    //value to multiply *4
-    //e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte
+    /*Calculating ip header length
+     * value to multiply *4
+     *e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte */
     uint8_t ip_header_len = ip->ihl << 2;   //SHL 2 -> *4 multiply
 
     /*Parsing L4 TCP*/
@@ -189,7 +189,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     /*Updating time of last insertion*/
     cinfo->last_ins_tstamp = curr_time;
 
-    /*Setting packet features*/
+    /*Setting packet features
+     * no need to reset the struct, since all field will be replaced*/
     pkt_info->timestamp = curr_time;
     pkt_info->saddr = bpf_ntohl(ip->saddr);
     pkt_info->daddr = bpf_ntohl(ip->daddr);
@@ -198,7 +199,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
     pkt_info->tcp_ack = tcp->ack_seq;
     pkt_info->tcp_win = bpf_ntohs(tcp->window);
-    pkt_info->tcp_len = (uint16_t)(pkt_info->length - sizeof(struct iphdr) - sizeof(*tcp));
+    pkt_info->tcp_len = (uint16_t)(pkt_info->length - ip_header_len - sizeof(*tcp));
     pkt_info->tcp_flags = (tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4) |
                         (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin;
 
