@@ -1,16 +1,13 @@
 /**
  * eBPF C program to be dynamically injected in the kernel.
- * The aim of this program is to extract some info concerning many packets passing through the interface in order to prevent a possible attack.
- * By now the following protocols are checked:
- *  - TCP
- *  [- UDP]
- *  [- ICMP]
+ * The aim of this program is to extract some info concerning many TCP sessions packets passing through the interface in order to prevent a possible attack.
  */
+
 /*Protocol type according to standard*/
 #define IPPROTO_TCP 6
 
 /*Own control variables*/
-#define N_PACKET 5000
+#define N_PACKET 10000
 #define N_SESSION 10240
 #define RESTART_TIME 10000000000
 
@@ -26,11 +23,7 @@ struct tcp_session {
 struct capture_info {
     unsigned int feature_map_index;
     unsigned int n_session_tracking;
-} __attribute__((packed));
-
-struct tracked_sessions {
     uint64_t last_ins_tstamp;
-    struct tcp_session list[N_SESSION];
 } __attribute__((packed));
 
 /*Features to be exported*/
@@ -112,15 +105,11 @@ struct tcphdr {
     __be16  urg_ptr;
 } __attribute__((packed));
 
-/*Example of empty structured used to initialize others*/
-static struct tcp_session EmptyStruct;
-
 /*Structures shared between Control Plane - Data Plane*/
 BPF_ARRAY(CAPTURE_INFO, struct capture_info, 1);
 BPF_ARRAY(PACKET_FEATURE_MAP, struct features, N_PACKET);
-/*Internal structure to check whether a session is tracked or not*/
-BPF_HASH(TCP_SESSIONS_TRACKED, struct tcp_session, u64, N_SESSION);
-BPF_ARRAY(TCP_SESSION_HELPER, struct tracked_sessions, 1);
+/*Tracked session map*/
+BPF_TABLE("lru_hash", struct tcp_session, u8, TCP_SESSIONS_TRACKED, N_SESSION);
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
     void *data = (void *) (long) ctx->data;
@@ -131,6 +120,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     if (data + sizeof(*ethernet) > data_end)
         return RX_OK;
 
+    /*Checking if Protocol type is IP*/
     if (ethernet->proto != bpf_htons(ETH_P_IP))
         return RX_OK;
 
@@ -159,34 +149,17 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     	return RX_OK;
  	}
 
-    /*Retrieving tcp tracked session helper*/
-    struct tracked_sessions *t_sess =  TCP_SESSION_HELPER.lookup(&key);
-    if (!t_sess){
-        return RX_OK;
-    }
-
     /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
     uint64_t curr_time = ctx->tstamp == 0? bpf_ktime_get_ns() : ctx->tstamp;
 
     /*Checking if array of captured packets is full*/
     if(cinfo->feature_map_index == N_PACKET) {
         /*Checking if last insertion happened 10s ago*/
-        if(curr_time - t_sess->last_ins_tstamp < RESTART_TIME) {
-            pcn_log(ctx, LOG_TRACE, "Number of packet to be stored reached!");
+        if(curr_time - cinfo->last_ins_tstamp < RESTART_TIME) {
             return RX_OK;
         }
         /*Reset head to zero to start extracting packet feature again*/
         cinfo->feature_map_index = 0;
-        /*If reached max session to be tracked flush the table*/
-        /*TODO: dig deeper for BPF_MAP_TYPE_LRU_HASH*/
-        if(cinfo->n_session_tracking == N_SESSION) {
-            for(int i=0; i<N_SESSION; i++) {
-                TCP_SESSIONS_TRACKED.delete(&t_sess->list[i]);
-                t_sess->list[i] = EmptyStruct;
-            }
-            cinfo->n_session_tracking = 0;
-        }
-        pcn_log(ctx, LOG_TRACE, "Enough time passed, RESTARTING FROM INDEX 0!");
     }
 
     /*Retrieving current features slot*/
@@ -197,45 +170,35 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
     /*Check if it is already tracked*/
     struct tcp_session session = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest};
-    uint64_t *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
+    u8 *is_tracked = TCP_SESSIONS_TRACKED.lookup(&session);
     if(!is_tracked) {
-        /*Check if already tracking enough session*/
-        if(cinfo->n_session_tracking == N_SESSION) {
-            pcn_log(ctx, LOG_TRACE, "Number of session tracked reached!");
-            return RX_OK;
-        }
         /*Increase tracked sessions and store current one in map*/
-        uint64_t val = cinfo->n_session_tracking;
+        u8 val = 0;
         TCP_SESSIONS_TRACKED.insert(&session, &val);
-        /*Always true but required from compiler*/
-        if(cinfo->n_session_tracking >= 0 && cinfo->n_session_tracking < N_SESSION) {
-            t_sess->list[cinfo->n_session_tracking] = session;
-        }
         cinfo->n_session_tracking+=1;
-        pcn_log(ctx, LOG_TRACE, "New tracked session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
-    } else {
-        pcn_log(ctx, LOG_TRACE, "Already tracking session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
     }
-            
-    /*Updating last inserted packet timestamp*/
-    t_sess->last_ins_tstamp = curr_time;
+    
+    /*Updating time of last insertion*/
+    cinfo->last_ins_tstamp = curr_time;
 
     /*Setting packet features*/
+    pkt_info->timestamp = curr_time;
+    pkt_info->saddr = bpf_ntohl(ip->saddr);
+    pkt_info->daddr = bpf_ntohl(ip->daddr);
+    pkt_info->length = bpf_ntohs(ip->tot_len);
+    pkt_info->ipv4_flags = bpf_ntohs(ip->frag_off);
+
     pkt_info->tcp_ack = tcp->ack_seq;
     pkt_info->tcp_win = bpf_ntohs(tcp->window);
     pkt_info->tcp_len = (uint16_t)(pkt_info->length - sizeof(struct iphdr) - sizeof(*tcp));
     pkt_info->tcp_flags = (tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4) |
                         (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin;
 
-    /*Setting packet features*/
-    pkt_info->saddr = bpf_ntohl(ip->saddr);
-    pkt_info->daddr = bpf_ntohl(ip->daddr);
-    pkt_info->length = bpf_ntohs(ip->tot_len);
-    pkt_info->ipv4_flags = bpf_ntohs(ip->frag_off);
-    pkt_info->timestamp = curr_time;
-
+    /*
     pcn_log(ctx, LOG_TRACE, "Inserted Packet at index: %u ", cinfo->feature_map_index);
-
+    pcn_log(ctx, LOG_TRACE, "\tBelonging to TCP session {%u, %u, %u, %u}", session.saddr, session.daddr, session.sport, session.dport);
+    */
+   
     /*The capture was fine so increase the index*/
     cinfo->feature_map_index+=1;
 
