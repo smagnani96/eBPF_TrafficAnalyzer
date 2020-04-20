@@ -222,11 +222,16 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     	return RX_OK;
  	}
 
+    //calculate ip header length
+    //value to multiply *4
+    //e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte
+    uint8_t ip_header_len = ip->ihl << 2;   //SHL 2 -> *4 multiply
+
     switch(ip->protocol) {
     	case IPPROTO_TCP: {
             /*Parsing L4 TCP*/
-    		struct tcphdr *tcp = data + sizeof(struct eth_hdr) + sizeof(struct iphdr);
-		 	if(data + sizeof(struct eth_hdr) + sizeof(struct iphdr) + sizeof(*tcp) > data_end) {
+    		struct tcphdr *tcp = data + sizeof(struct eth_hdr) + ip_header_len;
+		 	if((void *)tcp + sizeof(*tcp) > data_end) {
  				return RX_OK;
             }
             /*Check if it is already tracked*/
@@ -268,8 +273,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         /*
     	case IPPROTO_ICMP: {
             //Parsing L4 ICMP
-            struct icmphdr *icmp = data + sizeof(struct eth_hdr) + sizeof(struct iphdr);
-            if(data + sizeof(struct eth_hdr) + sizeof(struct iphdr) + sizeof(*icmp) > data_end) {
+            struct icmphdr *icmp = data + sizeof(struct eth_hdr) + ip_header_len;
+            if((void *)icmp + sizeof(*icmp) > data_end) {
                 return RX_OK;
             }
             pkt_info->icmp_type = icmp->type;
@@ -278,8 +283,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         }
     	case IPPROTO_UDP: {
             //Parsing L4 UDP
-            struct udphdr *udp = data + sizeof(struct eth_hdr) + sizeof(struct iphdr);
-            if(data + sizeof(struct eth_hdr) + sizeof(struct iphdr) + sizeof(*udp) > data_end) {
+            struct udphdr *udp = data + sizeof(struct eth_hdr) + ip_header_len;
+            if((void *)udp + sizeof(*udp) > data_end) {
                 return RX_OK;
             }
             pkt_info->udp_len = bpf_ntohs(udp->len);

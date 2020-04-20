@@ -136,9 +136,14 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
  		return RX_OK;
  	}
 
+    //calculate ip header length
+    //value to multiply *4
+    //e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte
+    uint8_t ip_header_len = ip->ihl << 2;   //SHL 2 -> *4 multiply
+
     /*Parsing L4 TCP*/
-    struct tcphdr *tcp = data + sizeof(struct eth_hdr) + sizeof(struct iphdr);
-    if(data + sizeof(struct eth_hdr) + sizeof(struct iphdr) + sizeof(*tcp) > data_end) {
+    struct tcphdr *tcp = data + sizeof(struct eth_hdr) + ip_header_len;
+    if((void *)tcp + sizeof(*tcp) > data_end) {
         return RX_OK;
     }
     
