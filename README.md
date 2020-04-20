@@ -21,12 +21,9 @@ Every packet belonging to those session is analyzed, and some information are st
 
 When there is no enough space for more packet to be stored the program ignores the following packets for *RESTART_TIME* nanoseconds.
 
-Once *RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. At this point, if 
-the current number of session tracked is lower than *N_SESSION*, nothing happens. Otherwise, the session map is flushed and new sessions will repopulate it.
-This is a workaround needed due to the lack of ControlPlane decision making. Since I have to develop a DataPlane program without modifying the control plane 
-(which is automatically handled by the Dynmon Polycube service) this is an interesting and quite effective solution. In fact, if we consider that the default
-size of a BPF_HASH map is 10240 entries, this operation will be rarely performed, meaning no overhead at all. Of course the perfect solution would be letting the ControlPlane decide when
-to flush entries using for example a `LRU` map, deleting all the entries older than a certain timestamp.
+Once *RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
+
+Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
 
 ## Multiprotocol traffic Analyzer (WIP)
 
