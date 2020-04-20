@@ -14,6 +14,9 @@ Two parameters are vital:
 
 * N_PACKET, the number of packet which can hold the metric exported (BPF map)
 * N_SESSION, the number of session whose packets should be taken into account
+* N_PACKET_PER_SESSION ,the number of packet from the same TCP session
+* PACKET_RESTART_TIME, the seconds to wait before resetting the buffer (BPF map metric exported)
+* SESSION_RESTART_TIME, the seconds to wait before restarting to track packets from an already tracked session
 
 The current filtered protocols are:
 
@@ -25,9 +28,11 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-When there is no enough space for more packet to be stored the program ignores the following packets for *RESTART_TIME* nanoseconds.
+When there is no enough space for more packet to be stored the program ignores the following packets for *PACKET_RESTART_TIME* nanoseconds.
 
-Once *RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
+Once *PACKET_RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
+
+A recent feature consists in setting the maximum amount of packet belonging to the same TCP session captured. Once that amount is reached, I start checking if that connection is still alive (other packets are arriving) for the following *SESSION_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
 
 Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
 
