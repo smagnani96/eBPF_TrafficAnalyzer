@@ -4,19 +4,18 @@ Simple eBPF C program to analyze some packets' feature in order to detect (and p
 
 Highly recommended to be used within the [Polycube](https://github.com/polycube-network/polycube) framework.
 
-## Multiprotocol traffic Analyzer (WIP)
+## How it works
 
-This section covers the main feature of this project, the [feature\_extractor\_all.c](./src/feature_extractor_all.c) program.
-
-This is still a work in progress program which will be developed later.
+This section covers the main feature of this project, the [feature\_extractor.c](./src/feature_extractor.c) program.
 
 Two parameters are vital:
 
-* N_PACKET, the number of packet which can hold the metric exported (BPF map)
-* N_SESSION, the number of session whose packets should be taken into account
-* N_PACKET_PER_SESSION ,the number of packet from the same TCP session
-* PACKET_RESTART_TIME, the seconds to wait before resetting the buffer (BPF map metric exported)
-* SESSION_RESTART_TIME, the seconds to wait before restarting to track packets from an already tracked session
+* *N_SESSION*, the number of max TCP session tracked
+* *N_PACKET_PER_SESSION*, the number of packet from the same TCP session
+* *N_PACKET_TOTAL*, the number of max packet captured (Size of PACKET_BUFFER)
+* *SESSION_ACCEPT_RESTART_TIME*, seconds to wait before accepting new sessions
+* *SESSION_PACKET_RESTART_TIME*, seconds to wait before restarting to track packets from an already tracked session
+* *BUFFER_PACKET_RESTART_TIME*, seconds to wait before resetting the buffer (5 seconds)
 
 The current filtered protocols are:
 
@@ -28,21 +27,15 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-When there is no enough space for more packet to be stored the program ignores the following packets for *PACKET_RESTART_TIME* nanoseconds.
+When there is not enough space left for more packet to be stored, the program ignores the following packets for *BUFFER_PACKET_RESTART_TIME* nanoseconds.
 
-Once *PACKET_RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
+Once *BUFFER_PACKET_RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
 
-A recent feature consists in setting the maximum amount of packet belonging to the same TCP session captured. Once that amount is reached, I start checking if that connection is still alive (other packets are arriving) for the following *SESSION_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
+A recent feature consists in setting the maximum amount of packet belonging to the same session captured. Once that the maximum is reached, I start checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
+
+In case a new session arrives but already *N_SESSION* are being tracked, if *SESSION_ACCEPT_RESTART_TIME* nanoseconds since the last accepted session have passed, this new connection is taken into account, replacing the oldest one.
 
 Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
-
-## Tcp traffic Analyzer
-
-This section concerns the program [feature\_extractor\_tcp.c](./src/feature_extractor_tcp.c).
-
-It is used to extract information concerning some TCP connection passing through the network interface.
-
-All the data structures and logic are the same of the upper section, except that in this program I only cover TCP sessions instead of all the other protocols.
 
 ## Infrastructure Architecture
 
@@ -99,8 +92,9 @@ An example could be `./dynmon_injector.py monitor1 br1:port1 feature_extractor.j
 At this point if everything went well the service is already gathering informations ready to be consumed. You can type `polycubectl <monitor_name> show metrics`
 to read results on a command line.
 
-Although, we have though of a [dynmon_extractor.py](./tools/dynmon\_extractor.py) script to retrieve results and to store them in a directory (default `./dump`). Each
-capture is identified by `timestamp__IPSOURCE__IPDEST` name plus the desider format (default `.csv`).
+Although, we have though of a [dynmon_extractor.py](./tools/dynmon\_extractor.py) script to retrieve results and to store them in a directory (default `./dump`). The file `result.json` will contain the dump of the retrieved data. 
+
+In case you want to inspect packet per packet, by adding `--debug` the scripts will print each packet in different files identified by `srcIp-srcPort___dstIp-dstPort__timestamp.csv`.
 
 ## Test
 
