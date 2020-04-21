@@ -12,8 +12,8 @@
             }
         },
         {
-            "name": "PACKET_FEATURE_MAP",
-            "map-name": "PACKET_FEATURE_MAP",
+            "name": "PACKET_BUFFER",
+            "map-name": "PACKET_BUFFER",
             "open-metrics-metadata": {
                 "help": "This metric represents the packets' features.",
                 "type": "counter",
