@@ -5,6 +5,7 @@ import argparse
 import requests
 import json
 import socket, struct
+from datetime import datetime
 import os
 import errno
 
@@ -52,33 +53,28 @@ def main():
 	for metric in metrics:
 		value = json.loads(metric['value'])
 		if metric['name'] == capture_map_name:
-			entry_index = int(value['feature_map_index'])
+			entry_index = int(value['feature_map_index']) - 1 if int(value['feature_map_index'])-1 >= 0 else 0 
 			print('Information concerning the actual capture')
-			print('\tEntryValidIndex: 0-{}'.format(value['feature_map_index']))
+			print('\tEntryValidIndex: [0-{}]'.format(value['feature_map_index']))
 			print('\tSessionTracked: {}'.format(value['n_session_tracking']))
 		elif metric['name'] == packet_feature_map_name:
-			for i in range(entry_index):
-				timestamp = value[i]['timestamp']
-				saddr = socket.inet_ntoa(struct.pack('!L', value[i]['saddr']))
-				daddr = socket.inet_ntoa(struct.pack('!L', value[i]['daddr']))
-				length = value[i]['length']
-				ipv4_flags = value[i]['ipv4_flags']
-				tcp_len = value[i]['tcp_len']
-				tcp_ack = value[i]['tcp_ack']
-				tcp_flags = value[i]['tcp_flags']
-				tcp_win = value[i]['tcp_win']
-				udp_len = value[i].get('udp_len', 0)
-				icmp_type = value[i].get('icmp_type', 0)
-				file = open(f'{output_dir}/{timestamp}__{saddr}__{daddr}.{file_format}', 'w')
-				file.write(f"Timestamp,\t{timestamp}\n")
-				file.write(f"Length,\t{length}\n")
-				file.write(f"IPv4 flags,\t{ipv4_flags}\n")
-				file.write(f"TCP len,\t{tcp_len}\n")
-				file.write(f"TCP ACK,\t{tcp_ack}\n")
-				file.write(f"TCP flags,\t{tcp_flags}\n")
-				file.write(f"TCP Win,\t{tcp_win}\n")
-				file.write(f"UDP len,\t0\n")
-				file.write(f"ICMP type,\t0")
+			for packet in value[:entry_index]:
+				timestamp = packet['timestamp']
+				seconds = timestamp // 1000000000
+				nanoseconds = str(timestamp)[:9]
+				saddr = socket.inet_ntoa(struct.pack('!L', packet['saddr']))
+				daddr = socket.inet_ntoa(struct.pack('!L', packet['daddr']))
+				file = open(f"{output_dir}/{saddr}-{packet['sport']}___{daddr}-{packet['dport']}___{timestamp}.{file_format}", 'w')
+				file.write(f"Seconds     ,\t{seconds}\n")
+				file.write(f"Ns          ,\t{nanoseconds}\n")
+				file.write(f"Length      ,\t{packet['length']}\n")
+				file.write(f"IPv4 flags  ,\t{packet['ipv4_flags']}\n")
+				file.write(f"TCP len     ,\t{packet['tcp_len']}\n")
+				file.write(f"TCP ACK     ,\t{packet['tcp_ack']}\n")
+				file.write(f"TCP flags   ,\t{packet['tcp_flags']}\n")
+				file.write(f"TCP Win     ,\t{packet['tcp_win']}\n")
+				file.write(f"UDP len     ,\t{packet.get('udp_len', 0)}\n")
+				file.write(f"ICMP type   ,\t{packet.get('icmp_type', 0)}\n")
 				file.write
 				file.close()
 		else:

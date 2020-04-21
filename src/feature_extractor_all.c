@@ -40,9 +40,11 @@ struct capture_info {
 
 /*Features to be exported*/
 struct features {
+    uint64_t timestamp;     //Packet timestamp
     uint32_t saddr;         //IP source address
     uint32_t daddr;         //IP destination address
-    uint64_t timestamp;     //Packet timestamp
+    uint16_t sport;         //TCP/UDP source port
+    uint16_t dport;         //TCP/UDP destination port
     uint16_t length;        //IP length value
     uint16_t ipv4_flags;    //IP flags
     uint16_t tcp_len;       //TCP payload length
@@ -242,6 +244,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
             /*Now that I'm sure to take this packet reset the structure (could contain old data)*/
             *pkt_info = EmptyFeatures;
             pkt_info->length = bpf_ntohs(ip->tot_len);
+            pkt_info->sport = bpf_htons(tcp->source);
+            pkt_info->dport = bpf_htons(tcp->dest);
             pkt_info->tcp_ack = tcp->ack_seq;
  			pkt_info->tcp_win = bpf_ntohs(tcp->window);
  			pkt_info->tcp_len = (uint16_t)(pkt_info->length - ip_header_len - sizeof(*tcp));
@@ -270,6 +274,8 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
             /*Now that I'm sure to take this packet reset the structure (could contain old data)*/
             *pkt_info = EmptyFeatures;
             pkt_info->length = bpf_ntohs(ip->tot_len);
+            pkt_info->sport = bpf_htons(udp->source);
+            pkt_info->dport = bpf_htons(udp->dest);
             pkt_info->udp_len = bpf_ntohs(udp->len) - sizeof(*udp);
     		break;
         }
