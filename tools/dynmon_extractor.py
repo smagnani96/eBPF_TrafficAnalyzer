@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # coding: utf-8
 
+import sched
+import time
 import argparse
 import requests
 import json
@@ -16,6 +18,7 @@ REQUESTS_TIMEOUT = 5 #seconds
 OUTPUT_DIR = 'dump'
 CAPTURE_INFO_MAP_NAME = "CAPTURE_INFO"
 PACKET_FEATURE_MAP_NAME = "PACKET_BUFFER"
+INTERVAL = 10 
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 
@@ -29,6 +32,7 @@ def main():
 	cube_name = args['cube_name']
 	output_dir = args['output']
 	debug = args['debug']
+	interval = args['interval']
 
 	capture_map_name = args['capture_map_name']
 	packet_feature_map_name = args['packet_feature_map_name']
@@ -36,7 +40,6 @@ def main():
 	polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
 	checkIfServiceExists(cube_name)
-	metrics = getMetrics(cube_name)
 
 	try:
 		os.mkdir(output_dir)
@@ -47,7 +50,13 @@ def main():
 	else:
 		print (f"Successfully created the directory {output_dir}")
 
+	s = sched.scheduler(time.time, time.sleep)
+	dynmonConsume(s, cube_name, capture_map_name, packet_feature_map_name, output_dir, debug, interval)
+	s.run()
+
+def dynmonConsume(sc, cube_name, capture_map_name, packet_feature_map_name, output_dir, debug, interval):
 	entry_index = 0
+	metrics = getMetrics(cube_name)
 
 	for metric in metrics[:-1]:
 		value = json.loads(metric['value'])
@@ -63,6 +72,7 @@ def main():
 		else:
 			#Add here for more metric to be parsed
 			print('Ignored metric')
+	sc.enter(interval, 1, dynmonConsume, (sc, cube_name, capture_map_name, packet_feature_map_name, output_dir, debug, interval))
 
 
 def reassembleAndPrint(packets, output_dir):
@@ -149,6 +159,7 @@ def parseArguments():
 	parser.add_argument('-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
 	parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
 	parser.add_argument('-o', '--output', help='set the output directory', type=str, default=OUTPUT_DIR)
+	parser.add_argument('-i', '--interval', help='set time interval for polycube query', type=int, default=INTERVAL)
 	parser.add_argument('-d', '--debug', help='set the debug mode, to print also single packets file in the directory as .csv', action='store_true')
 	parser.add_argument('-cm', '--capture_map_name', help='set the capture map name (the same in the json file)', type=str, default=CAPTURE_INFO_MAP_NAME)
 	parser.add_argument('-pm', '--packet_feature_map_name', help='set the packet feature map name (the same in the json file)', type=str, default=PACKET_FEATURE_MAP_NAME)
