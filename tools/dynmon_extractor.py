@@ -49,7 +49,7 @@ def main():
 
 	entry_index = 0
 
-	for metric in metrics:
+	for metric in metrics[:-1]:
 		value = json.loads(metric['value'])
 		if metric['name'] == capture_map_name:
 			entry_index = int(value['next_index']) - 1 if int(value['next_index'])-1 >= 0 else 0 
@@ -73,7 +73,6 @@ def reassembleAndPrint(packets, output_dir):
 		flowIdentifier = (saddr, packet['srcPort'], daddr, packet['dstPort'], packet['protocol'])
 		features = []
 		for key, value in packet.items():
-			print(key)
 			if key not in ['srcIp', 'srcPort', 'dstIp', 'dstPort', 'protocol']:
 				features.append(value)
 		if flowIdentifier in flows:
