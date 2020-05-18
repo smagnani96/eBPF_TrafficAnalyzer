@@ -1,14 +1,14 @@
 # eBPF_TrafficAnalyzer
 
-Simple eBPF C program to analyze some packets' feature in order to detect (and possibly prevent) a possible ongoing network attack.
+eBPF C programs to analyze some packets' feature in order to detect (and possibly prevent) a possible ongoing network attack.
 
 Highly recommended to be used within the [Polycube](https://github.com/polycube-network/polycube) framework.
 
-## How it works
+## DDos detection
 
-This section covers the main feature of this project, the [feature\_extractor.c](./src/feature_extractor.c) program.
+This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detection/feature_extractor.c) program related to DDos detection.
 
-Two parameters are vital:
+The following parameters are vital:
 
 * *N_SESSION*, the number of max TCP session tracked
 * *N_PACKET_PER_SESSION*, the number of packet from the same TCP session
@@ -31,11 +31,41 @@ When there is not enough space left for more packet to be stored, the program ig
 
 Once *BUFFER_PACKET_RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
 
-A recent feature consists in setting the maximum amount of packet belonging to the same session captured. Once that the maximum is reached, I start checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
+A recent feature consists in setting the maximum amount of packet belonging to the same session captured. Once that the maximum is reached, it starts checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
 
 In case a new session arrives but already *N_SESSION* are being tracked, if *SESSION_ACCEPT_RESTART_TIME* nanoseconds since the last accepted session have passed, this new connection is taken into account, replacing the oldest one.
 
 Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
+
+TODO: implement QUEUE support to avoid using indexed arrays + delete entries when requested + EGRESS datapath
+
+## Crypto mining
+
+This section covers the [crypto_mining/feature\_extractor.c](./src/crypto_mining/feature_extractor.c) program related to Crypto Mining detection.
+
+The only parameter vital to the program is *N_SESSION*, which represents the max number of sessions tracked.
+
+The current filtered protocols are:
+
+* TCP
+* UDP
+
+When booted of course the program does not have any information about which packet has to be captured or not (if belonging to a TCP session), so it will consider all passing packet if there is enough space.
+
+Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
+
+When the sessions map is full, the oldest entry is deleted, according to LRU map behaviour automatically implemented kernel-side.
+
+For each session, the following parameters are stored:
+
+* *n_packets_server*: number of packets received by the server
+* *n_packets_client*: number of packets received by the client
+* *n_bits_server*: total bits received from server
+* *n_bits_client*: total bits sent from client
+* *start_timestamp*: timestamp of the first received packet (when the connection has started)
+* *alive_timestamp*: timestamp of the last received packet
+
+TODO: implement time period + implement atomic batch lookup for lru maps + EGRESS datapath
 
 ## Infrastructure Architecture
 
@@ -43,18 +73,18 @@ Thanks to the [Dynmon](https://polycube-network.readthedocs.io/en/latest/service
 are able to inject dynamically new eBPB code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
 
 Using the [dymon\_injector.py](./tools/dynmon_injector.py) script (src. [here](https://github.com/polycube-network/polycube/blob/master/src/services/pcn-dynmon/tools/dynmon_injector.py>)) a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations
-it has gathered. But what information? Those we tell the probe to gather. In fact in the [feature_extractor.json](./src/feature_extractor.json) file users not only insert their own code, but they also specify which metrics should be exported by the service.
+it has gathered. But what information? Those we tell the probe to gather. In fact both in [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json)  and [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature_extractor.json) files users not only insert their own code, but they also specify which metrics should be exported by the service.
 
 The injectable code should be formatted and escaped accordingly to JSON format. To achieved that, an apposite python [formatter.py](./tools/formatter.py) script has been created.
 
 To extract the metrics from the monitor, there are multiple options, but the two most relevant are the following:
 
 * querying the polycube daemon via command line interface (`polycubectl <monitor_name> show metrics`);
-* using the python [dynmon\_extractor.py](./tools/dynmon_extractor.py), which will automatically stores all the information in files.
+* using one of the two python [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py) [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py), which will automatically store all the information in files.
 
 ## Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [feature\_extractor.c](./src/feature_extractor.c) example.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [ddos_detection](./src/ddos_detection/feature_extractor.c) or [crypto_mining](./src/crypto_mining/feature_extractor.c) example.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 
@@ -66,7 +96,7 @@ In the code, you can use all data structures eBPF offers you. Later you can deci
 
 ### Step2 - Format code
 
-Once finished your program, you should escape it to be inserted inside the [feature\_extractor.json](./src/feature_extractor.json) file under the `"code"` field. 
+Once finished your program, you should escape it to be inserted inside one of [ddos_detection/feature\_extractor.json](./src/ddos_detection/feature_extractor.json) or [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature\_extractor.json) file under the `"code"` field. 
 Moreover, you should also specify in this file all the metrics (also OpenMetrics is supported) to be exported between the service and the outside world.
 
 All the metrics `map_name` should refer to existing map you have previously declared in your eBPF C code, otherwise it will not be found.
@@ -92,9 +122,13 @@ An example could be `./dynmon_injector.py monitor1 br1:port1 feature_extractor.j
 At this point if everything went well the service is already gathering informations ready to be consumed. You can type `polycubectl <monitor_name> show metrics`
 to read results on a command line.
 
-Although, we have though of a [dynmon_extractor.py](./tools/dynmon\_extractor.py) script to retrieve results and to store them in a directory (default `./dump`). The file `result.json` will contain the dump of the retrieved data. 
+Although, I have though of two scripts to automatically and periodically retrieve data and to store them in an apposite directory using as default the `json` data format.
+The scrips are: 
 
-In case you want to inspect packet per packet, by adding `--debug` the scripts will print each packet in different files identified by `srcIp-srcPort___dstIp-dstPort__timestamp.csv`.
+* [dynmon_extractor_ddos.py](./tools/dynmon\_extractor\_ddos.py) 
+* [dynmon_extractor_crypto.py](./tools/dynmon\_extractor\_crypto.py) 
+
+In case you want to inspect packet per packet, by adding `--debug` the scripts will print each packet in different files identified by `srcIp-srcPort___dstIp-dstPort__timestamp.csv`. (This feature is actually supported only for ddos extractor) 
 
 ## Test
 
