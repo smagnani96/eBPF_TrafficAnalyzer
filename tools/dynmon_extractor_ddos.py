@@ -27,6 +27,7 @@ def main():
 	cube_name = args['cube_name']
 	output_dir = args['output']
 	interval = args['interval']
+	debug = args['debug']
 	capture_map_name = args['capture_map_name']
 	packet_feature_map_name = args['packet_feature_map_name']
 
@@ -35,16 +36,16 @@ def main():
 	checkIfServiceExists(cube_name)
 	checkIfOutputDirExists(output_dir)
 
-	dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval)
+	dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug)
 
 
-def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval):
+def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug):
 	global counter
 	parsed_entries = []
 	entry_index = 0
 	my_count = counter
 	counter += 1
-	threading.Timer(interval, dynmonConsume, (cube_name, capture_map_name, packet_feature_map_name, output_dir, interval)).start()
+	threading.Timer(interval, dynmonConsume, (cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug)).start()
 	start_time = time.time()
 	
 	info_values = getMetric(cube_name, capture_map_name)
@@ -54,17 +55,15 @@ def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_d
 	if entry_index is None or entry_index == 0:
 		return
 
-	with open(f'{output_dir}/result_{my_count}.json', 'w') as fp:
-		json.dump(parseEntries(packet_values[:entry_index]), fp, indent=2)
-
+	printJson(parseEntries(packet_values[:entry_index]), output_dir, my_count) if debug is False else parseAndPrintDebug(packet_values[:entry_index], output_dir, my_count)	
 	print(f'Got something! Execution n°{my_count} time {time.time() - start_time}')
 
 
 def parseEntries(entries):
 	flows = {}
 	for entry in entries:
-		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "little"))
-		daddr = socket.inet_ntoa(int(entry['dstIp']).to_bytes(4, "little"))
+		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "big"))
+		daddr = socket.inet_ntoa(int(entry['dstIp']).to_bytes(4, "big"))
 		flowIdentifier = (saddr, entry['srcPort'], daddr, entry['dstPort'], entry['protocol'])
 		features = []
 		for key, value in entry.items():
@@ -74,11 +73,36 @@ def parseEntries(entries):
 			flows[flowIdentifier].append(features)
 		else:
 			flows[flowIdentifier] = [features]
-	data = {"flows": []}
+	data = []
 	for key, value in flows.items():
-		data['flows'].append({"id": key, "packets": value})
+		data.append({"id": key, "packets": value})
 	return data
 
+
+def printJson(values, output_dir, counter):
+	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
+		json.dump(values, fp, indent=2)
+
+
+def parseAndPrintDebug(entries, output_dir, counter):
+	for entry in entries:
+		timestamp = entry['timestamp']
+		seconds = timestamp // 1000000000
+		nanoseconds = str(timestamp)[:9]
+		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "big"))
+		daddr = socket.inet_ntoa(int(entry['dstIp']).to_bytes(4, "big"))
+		file = open(f"{output_dir}/{saddr}-{entry['srcPort']}___{daddr}-{entry['dstPort']}___{timestamp}.csv", 'w')
+		file.write(f"Seconds     ,\t{seconds}\n"
+			f"Ns          ,\t{nanoseconds}\n"
+			f"Length      ,\t{entry['length']}\n"
+			f"IPv4 flags  ,\t{entry['ipFlagsFrag']}\n"
+			f"TCP len     ,\t{entry['tcpLen']}\n"
+			f"TCP ACK     ,\t{entry['tcpAck']}\n"
+			f"TCP flags   ,\t{entry['tcpFlags']}\n"
+			f"TCP Win     ,\t{entry['tcpWin']}\n"
+			f"UDP len     ,\t{entry['udpSize']}\n"
+			f"ICMP type   ,\t{entry['icmpType']}")
+		file.close()
 
 def checkIfOutputDirExists(output_dir):
 	try:
@@ -133,6 +157,7 @@ def parseArguments():
 	parser.add_argument('-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
 	parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
 	parser.add_argument('-o', '--output', help='set the output directory', type=str, default=OUTPUT_DIR)
+	parser.add_argument('-d', '--debug', help='set the debug mode, to print also single packets file in the directory as .csv', action='store_true')
 	parser.add_argument('-i', '--interval', help='set time interval for polycube query', type=int, default=INTERVAL)
 	parser.add_argument('-cm', '--capture_map_name', help='set the capture map name (the same in the json file)', type=str, default=CAPTURE_INFO_MAP_NAME)
 	parser.add_argument('-pm', '--packet_feature_map_name', help='set the packet feature map name (the same in the json file)', type=str, default=PACKET_FEATURE_MAP_NAME)
