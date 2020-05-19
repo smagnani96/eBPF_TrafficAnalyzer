@@ -12,7 +12,7 @@ REQUESTS_TIMEOUT = 5
 OUTPUT_DIR = 'dump_ddos'
 CAPTURE_INFO_MAP_NAME = "CAPTURE_INFO"
 PACKET_FEATURE_MAP_NAME = "PACKET_BUFFER"
-INTERVAL = 10 
+INTERVAL = 10 # seconds, to have less just insert a decimal number like 0.01
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 counter = 0
@@ -52,7 +52,9 @@ def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_d
 	packet_values =  getMetric(cube_name, packet_feature_map_name)
 
 	entry_index = info_values[0]['next_index']
+
 	if entry_index is None or entry_index == 0:
+		print(f'Got nothing ... Execution n°{my_count} time {time.time() - start_time}')
 		return
 
 	parseAndStore(packet_values[:entry_index], output_dir, my_count) if debug is False else parseAndStoreDebug(packet_values[:entry_index], output_dir, my_count)	
@@ -133,6 +135,9 @@ def checkIfServiceExists(cube_name):
 def getMetric(cube_name, metric_name):
 	try:
 		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/{metric_name}/value', timeout=REQUESTS_TIMEOUT)
+		if response.status_code == 500:
+			print(response.content)
+			exit(1)
 		response.raise_for_status()
 		return json.loads(json.loads(response.content))
 	except requests.exceptions.HTTPError:
@@ -145,7 +150,7 @@ def getMetric(cube_name, metric_name):
 		exit(1)
 	except requests.exceptions.RequestException:
 		print('Error: unable to connect to polycube daemon.')
-		exit(1)
+		exit(1) 
 
 
 def parseArguments():

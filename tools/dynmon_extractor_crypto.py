@@ -11,7 +11,7 @@ POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 5
 OUTPUT_DIR = 'dump_crypto'
 SESSIONS_MAP_NAME = "SESSIONS_TRACKED"
-INTERVAL = 10 
+INTERVAL = 10 # seconds, to have less just insert a decimal number like 0.01
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 counter = 0
@@ -44,8 +44,11 @@ def dynmonConsume(cube_name, sessions_map_name, output_dir, interval, debug):
 	counter += 1
 	threading.Timer(interval, dynmonConsume, (cube_name, sessions_map_name, output_dir, interval, debug)).start()
 	start_time = time.time()
+	
 	values = getMetric(cube_name, sessions_map_name)
+	
 	if values is None:
+		print(f'Got nothing ... Execution n°{my_count} time {time.time() - start_time}')
 		return
 	
 	parseAndStore(values, output_dir, my_count) if debug is False else parseAndStoreDebug(values, output_dir, my_count)	
@@ -135,6 +138,9 @@ def checkIfServiceExists(cube_name):
 def getMetric(cube_name, metric_name):
 	try:
 		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/{metric_name}/value', timeout=REQUESTS_TIMEOUT)
+		if response.status_code == 500:
+			print(response.content)
+			exit(1)
 		response.raise_for_status()
 		return json.loads(json.loads(response.content))
 	except requests.exceptions.HTTPError:
