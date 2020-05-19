@@ -55,11 +55,12 @@ def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_d
 	if entry_index is None or entry_index == 0:
 		return
 
-	printJson(parseEntries(packet_values[:entry_index]), output_dir, my_count) if debug is False else parseAndPrintDebug(packet_values[:entry_index], output_dir, my_count)	
+	parseAndStore(packet_values[:entry_index], output_dir, my_count) if debug is False else parseAndStoreDebug(packet_values[:entry_index], output_dir, my_count)	
 	print(f'Got something! Execution n°{my_count} time {time.time() - start_time}')
 
 
-def parseEntries(entries):
+def parseAndStore(entries, output_dir, counter):
+	data = []
 	flows = {}
 	for entry in entries:
 		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "big"))
@@ -73,18 +74,14 @@ def parseEntries(entries):
 			flows[flowIdentifier].append(features)
 		else:
 			flows[flowIdentifier] = [features]
-	data = []
 	for key, value in flows.items():
 		data.append({"id": key, "packets": value})
-	return data
-
-
-def printJson(values, output_dir, counter):
 	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
-		json.dump(values, fp, indent=2)
+		json.dump(data, fp, indent=2)
 
 
-def parseAndPrintDebug(entries, output_dir, counter):
+
+def parseAndStoreDebug(entries, output_dir, counter):
 	for entry in entries:
 		timestamp = entry['timestamp']
 		seconds = timestamp // 1000000000
