@@ -21,26 +21,6 @@
 #define SESSION_PACKET_RESTART_TIME 1000000000      // Seconds to wait before restarting to track packets from an already tracked session
 #define BUFFER_PACKET_RESTART_TIME  1000000000      // Seconds to wait before resetting the buffer (5 seconds)
 
-/*Features to be exported*/
-struct features {
-    //Needed to identify the session
-    uint32_t srcIp;                                 // IP source 
-    uint32_t dstIp;                                 // IP dest 
-    uint16_t srcPort;                               // Source port in little endian (if ICMP = 0)
-    uint16_t dstPort;                               // Dest port in little endian (if ICMP = 0)
-    uint8_t protocol;                               // Protocol ID
-    //Real features
-    uint64_t timestamp;                             //Packet timestamp
-    uint16_t length;                                //IP length value
-    uint16_t ipFlagsFrag;                           //IP flags
-    uint16_t tcpLen;                                //TCP payload length
-    uint32_t tcpAck;                                //TCP ack n°
-    uint8_t tcpFlags;                               //TCP flags
-    uint16_t tcpWin;                                //TCP window value
-    uint8_t udpSize;                                //UDP payload length
-    uint8_t icmpType;                               //ICMP operation type
-} __attribute__((packed));
-
 /*Session identifier*/
 struct session_key {
     __be32 saddr;                                   //IP source address
@@ -54,6 +34,20 @@ struct session_key {
 struct session_value {
   uint64_t last_ins_tstamp;                         // Timestamp of last packet inserted for that session
   uint32_t n_packets;                               // Total number of packet stored for that session since reset
+} __attribute__((packed));
+
+/*Features to be exported*/
+struct features {
+    struct session_key id;                          //Session identifier
+    uint64_t timestamp;                             //Packet timestamp
+    uint16_t length;                                //IP length value
+    uint16_t ipFlagsFrag;                           //IP flags
+    uint16_t tcpLen;                                //TCP payload length
+    uint32_t tcpAck;                                //TCP ack n°
+    uint8_t tcpFlags;                               //TCP flags
+    uint16_t tcpWin;                                //TCP window value
+    uint8_t udpSize;                                //UDP payload length
+    uint8_t icmpType;                               //ICMP operation type
 } __attribute__((packed));
 
 /*Structure containing info about capture*/
@@ -198,6 +192,18 @@ static __always_inline int check_or_try_add_session(struct session_key *key, str
   return 0;
 }
 
+/*Function to update a PACKET_BUFFER entry*/
+static __always_inline int update_feature(int index, struct features *new_features) {
+  /*Retrieving current features slot*/
+  struct features *pkt_info =  PACKET_BUFFER.lookup(&index);
+  if (!pkt_info){
+      return 1;
+  }
+  *pkt_info = *new_features;
+  return 0;
+}
+
+/*Default function called at each packet on interface*/
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
   void *data = (void *) (long) ctx->data;
   void *data_end = (void *) (long) ctx->data_end;
@@ -242,12 +248,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     cinfo->next_index = 0;
   }
 
-  /*Retrieving current features slot*/
-  struct features *pkt_info =  PACKET_BUFFER.lookup(&cinfo->next_index);
-  if (!pkt_info){
-      return RX_OK;
-  }
-
   /*Calculating ip header length
    * value to multiply by 4 (SHL 2)
    *e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte */
@@ -268,12 +268,14 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Now I'm sure to take the packet*/
       uint16_t len = bpf_ntohs(ip->tot_len);
-      struct features newFeatures = {.srcPort=bpf_htons(tcp->source), .dstPort=bpf_htons(tcp->dest), .length=len, 
+      struct features new_features = {.id=key, .length=len, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off),
         .tcpAck=tcp->ack_seq, .tcpWin=bpf_ntohs(tcp->window), .tcpLen=(uint16_t)(len - ip_header_len - sizeof(*tcp)), 
         .tcpFlags=(tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4)
                 | (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin};
       
-      *pkt_info = newFeatures;
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     case IPPROTO_ICMP: {
@@ -290,10 +292,12 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
 
       /*Now I'm sure to take the packet*/
-      uint16_t len = bpf_ntohs(ip->tot_len);
-      struct features newFeatures = {.length=len, .icmpType=icmp->type};
+      struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .icmpType=icmp->type,
+        .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      *pkt_info = newFeatures;
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     case IPPROTO_UDP: {
@@ -310,10 +314,12 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
 
       /*Now I'm sure to take the packet*/
-      uint16_t len = bpf_ntohs(ip->tot_len);
-      struct features newFeatures = {.srcPort=bpf_htons(udp->source), .dstPort=bpf_htons(udp->dest), .length=len, .udpSize=bpf_ntohs(udp->len) - sizeof(*udp)};
+      struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .udpSize=bpf_ntohs(udp->len) - sizeof(*udp),
+        .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      *pkt_info = newFeatures;
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     /*Should never reach this code since already checked*/
@@ -321,13 +327,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       return RX_OK;
     }
   }
-
-  /*Setting packet features*/
-  pkt_info->srcIp = bpf_ntohl(ip->saddr);
-  pkt_info->dstIp = bpf_ntohl(ip->daddr);
-  pkt_info->protocol = ip->protocol;
-  pkt_info->timestamp = curr_time;
-  pkt_info->ipFlagsFrag = bpf_ntohs(ip->frag_off);
    
   /*pcn_log(ctx, LOG_TRACE, "Inserted Packet at index: %u ", cinfo->next_index);*/
 

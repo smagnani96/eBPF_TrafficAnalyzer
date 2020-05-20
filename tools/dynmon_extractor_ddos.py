@@ -65,12 +65,15 @@ def parseAndStore(entries, output_dir, counter):
 	data = []
 	flows = {}
 	for entry in entries:
-		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "big"))
-		daddr = socket.inet_ntoa(int(entry['dstIp']).to_bytes(4, "big"))
-		flowIdentifier = (saddr, entry['srcPort'], daddr, entry['dstPort'], entry['protocol'])
+		sid = entry['id']
+		srcIp = socket.inet_ntoa(sid['saddr'].to_bytes(4, 'little'))
+		dstIp = socket.inet_ntoa(sid['daddr'].to_bytes(4, 'little'))
+		srcPort = socket.ntohs(sid['sport'])
+		dstPort = socket.ntohs(sid['dport'])
+		flowIdentifier = (srcIp, srcPort, dstIp, dstPort, sid['proto'])
 		features = []
 		for key, value in entry.items():
-			if key not in ['srcIp', 'srcPort', 'dstIp', 'dstPort', 'protocol']:
+			if key != 'id':
 				features.append(value)
 		if flowIdentifier in flows:
 			flows[flowIdentifier].append(features)
@@ -88,9 +91,12 @@ def parseAndStoreDebug(entries, output_dir, counter):
 		timestamp = entry['timestamp']
 		seconds = timestamp // 1000000000
 		nanoseconds = str(timestamp)[:9]
-		saddr = socket.inet_ntoa(int(entry['srcIp']).to_bytes(4, "big"))
-		daddr = socket.inet_ntoa(int(entry['dstIp']).to_bytes(4, "big"))
-		file = open(f"{output_dir}/{saddr}-{entry['srcPort']}___{daddr}-{entry['dstPort']}___{timestamp}.csv", 'w')
+		sid = entry['id']
+		srcIp = socket.inet_ntoa(sid['saddr'].to_bytes(4, 'little'))
+		dstIp = socket.inet_ntoa(sid['daddr'].to_bytes(4, 'little'))
+		srcPort = socket.ntohs(sid['sport'])
+		dstPort = socket.ntohs(sid['dport'])
+		file = open(f"{output_dir}/{srcIp}-{srcPort}___{dstIp}-{dstPort}___{timestamp}.csv", 'w')
 		file.write(f"Seconds     ,\t{seconds}\n"
 			f"Ns          ,\t{nanoseconds}\n"
 			f"Length      ,\t{entry['length']}\n"

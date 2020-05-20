@@ -34,7 +34,7 @@ def main():
 	checkIfServiceExists(cube_name)
 	checkIfOutputDirExists(output_dir)
 	
-	threading.Timer(interval, dynmonConsume, (cube_name, sessions_map_name, output_dir, interval, debug)).start()
+	dynmonConsume(cube_name, sessions_map_name, output_dir, interval, debug)
 
 
 def dynmonConsume(cube_name, sessions_map_name, output_dir, interval, debug):
@@ -60,16 +60,16 @@ def parseAndStore(entries, output_dir, counter):
 	for entry in entries:
 		key = entry['key']
 		value = entry['value']
-		saddr = socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little"))
-		daddr = socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little"))
-		sport = int.from_bytes(int(key['sport']).to_bytes(2, "little"), "little")
-		dport = int.from_bytes(int(key['dport']).to_bytes(2, "little"), "little")
+		srcIp = socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little"))
+		dstIp = socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little"))
+		srcPort = socket.ntohs(key['sport'])
+		dstPort = socket.ntohs(key['dport'])
 		data.append({
-			"id": (saddr, daddr, sport, dport, key['proto']),
+			"id": (srcIp, dstIp, srcPort, dstPort, key['proto']),
 			"value": {
 				"n_packets_server": value['n_packets_server'],
 				"n_packets_client": value['n_packets_client'],
-				"duration": int(value['alive_timestamp']) - int(value['start_timestamp'])
+				"duration": value['alive_timestamp'] - value['start_timestamp']
 			}})
 	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
@@ -87,15 +87,15 @@ def parseAndStoreDebug(entries, output_dir, counter):
 		duration = value['alive_timestamp'] - value['start_timestamp']
 		if duration == 0:
 			continue;
-		saddr = socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little"))
-		daddr = socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little"))
-		sport = int.from_bytes(int(key['sport']).to_bytes(2, "little"), "little")
-		dport = int.from_bytes(int(key['dport']).to_bytes(2, "little"), "little")
+		srcIp = socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little"))
+		dstIp = socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little"))
+		srcPort = socket.ntohs(key['sport'])
+		dstPort = socket.ntohs(key['dport'])
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
 		n_bits_server = value['n_bits_server']
 		n_bits_client = value['n_bits_client']
-		file.write(f"{time.time()}, {saddr}, {daddr}, {sport}, {dport}, {key['proto']}, ?, {n_packets_server}, {n_packets_client},"
+		file.write(f"{time.time()}, {srcIp}, {dstIp}, {srcPort}, {dstPort}, {key['proto']}, ?, {n_packets_server}, {n_packets_client},"
 			f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,duration)}, {makeDivision(n_packets_client,duration)},"
 			f"{makeDivision(n_bits_server,duration)}, {makeDivision(n_bits_client,duration)}, {makeDivision(n_bits_server,n_packets_server)},"
 			f"{makeDivision(n_bits_client,n_packets_client)}, {makeDivision(n_packets_server,n_packets_client)}, {makeDivision(n_bits_server,n_bits_client)}\n")
