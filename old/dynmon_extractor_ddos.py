@@ -8,9 +8,11 @@ from collections.abc import Sequence
 VERSION = '1.0'
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
-REQUESTS_TIMEOUT = 10
+REQUESTS_TIMEOUT = 5
 OUTPUT_DIR = 'dump_ddos'
-INTERVAL = 2 # seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
+CAPTURE_INFO_MAP_NAME = "CAPTURE_INFO"
+PACKET_FEATURE_MAP_NAME = "PACKET_BUFFER"
+INTERVAL = 10 # seconds, to have less just insert a decimal number like 0.01
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 counter = 0
@@ -26,36 +28,37 @@ def main():
 	output_dir = args['output']
 	interval = args['interval']
 	debug = args['debug']
+	capture_map_name = args['capture_map_name']
+	packet_feature_map_name = args['packet_feature_map_name']
 
 	polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
 	checkIfServiceExists(cube_name)
 	checkIfOutputDirExists(output_dir)
 
-	dynmonConsume(cube_name, output_dir, interval, debug)
+	dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug)
 
 
-def dynmonConsume(cube_name, output_dir, interval, debug):
+def dynmonConsume(cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug):
 	global counter
 	parsed_entries = []
+	entry_index = 0
 	my_count = counter
 	counter += 1
-	
+	threading.Timer(interval, dynmonConsume, (cube_name, capture_map_name, packet_feature_map_name, output_dir, interval, debug)).start()
 	start_time = time.time()
-	res =  getMetrics(cube_name)
-	req_time = time.time()
+	
+	info_values = getMetric(cube_name, capture_map_name)
+	packet_values =  getMetric(cube_name, packet_feature_map_name)
 
-	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, debug)).start()
+	entry_index = info_values[0]['next_index']
 
-	ingress = res['ingress-metrics'][0]['value'] if res['ingress-metrics'][0]['value'] is not None else []
-	egress = res['egress-metrics'][0]['value'] if res['egress-metrics'][0]['value'] is not None else []
-
-	if not ingress and not egress:
-		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+	if entry_index is None or entry_index == 0:
+		print(f'Got nothing ... Execution n°{my_count} time {time.time() - start_time}')
 		return
 
-	parseAndStore(ingress+egress, output_dir, my_count) if debug is False else parseAndStoreDebug(ingress+egress, output_dir, my_count)	
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+	parseAndStore(packet_values[:entry_index], output_dir, my_count) if debug is False else parseAndStoreDebug(packet_values[:entry_index], output_dir, my_count)	
+	print(f'Got something! Execution n°{my_count} time {time.time() - start_time}')
 
 
 def parseAndStore(entries, output_dir, counter):
@@ -80,6 +83,7 @@ def parseAndStore(entries, output_dir, counter):
 		data.append({"id": key, "packets": value})
 	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
+
 
 
 def parseAndStoreDebug(entries, output_dir, counter):
@@ -134,14 +138,14 @@ def checkIfServiceExists(cube_name):
 		exit(1)
 
 
-def getMetrics(cube_name):
+def getMetric(cube_name, metric_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/{metric_name}/value', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)
 		response.raise_for_status()
-		return json.loads(response.content)
+		return json.loads(json.loads(response.content))
 	except requests.exceptions.HTTPError:
 		return False, None
 	except requests.exceptions.ConnectionError:
@@ -162,7 +166,9 @@ def parseArguments():
 	parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
 	parser.add_argument('-o', '--output', help='set the output directory', type=str, default=OUTPUT_DIR)
 	parser.add_argument('-d', '--debug', help='set the debug mode, to print also single packets file in the directory as .csv', action='store_true')
-	parser.add_argument('-i', '--interval', help='set time interval for polycube query', type=float, default=INTERVAL)
+	parser.add_argument('-i', '--interval', help='set time interval for polycube query', type=int, default=INTERVAL)
+	parser.add_argument('-cm', '--capture_map_name', help='set the capture map name (the same in the json file)', type=str, default=CAPTURE_INFO_MAP_NAME)
+	parser.add_argument('-pm', '--packet_feature_map_name', help='set the packet feature map name (the same in the json file)', type=str, default=PACKET_FEATURE_MAP_NAME)
 	return parser.parse_args().__dict__
 
 

@@ -10,12 +10,12 @@ This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detecti
 
 The following parameters are vital:
 
+#define SESSION_PACKET_RESTART_TIME 1000000000      // Seconds to wait before restarting to track packets from an already tracked session
+
 * *N_SESSION*, the number of max TCP session tracked
 * *N_PACKET_PER_SESSION*, the number of packet from the same TCP session
-* *N_PACKET_TOTAL*, the number of max packet captured (Size of PACKET_BUFFER)
-* *SESSION_ACCEPT_RESTART_TIME*, seconds to wait before accepting new sessions
+* *N_PACKET_TOTAL*, the number of max packet captured (size of PACKET_BUFFER, usually N_SESSION*N_PACKET_PER_SESSION)
 * *SESSION_PACKET_RESTART_TIME*, seconds to wait before restarting to track packets from an already tracked session
-* *BUFFER_PACKET_RESTART_TIME*, seconds to wait before resetting the buffer (5 seconds)
 
 The current filtered protocols are:
 
@@ -27,17 +27,15 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-When there is not enough space left for more packet to be stored, the program ignores the following packets for *BUFFER_PACKET_RESTART_TIME* nanoseconds.
+Every session can store a limited amount of captured packets. Once that the maximum is reached, it starts checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
 
-Once *BUFFER_PACKET_RESTART_TIME* nanoseconds are passed, the program resets the head of the circular buffer to start gathering new packets' info. 
+When a new untracked session is detected, it is automatically added to all the other tracked ones using an LRU policy. If the map containing the sessions is large enough, this would mean that the LRU session who will be replaced is very old. Thanks to this policy and data structure (LRU_HASH map), I do not have to worry about memory leaks or flushing the table.
 
-A recent feature consists in setting the maximum amount of packet belonging to the same session captured. Once that the maximum is reached, it starts checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
+These steps are performed both in the *INGRESS* and *EGRESS* data path, using alongside maps. Their content will later be read and unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script.
 
-In case a new session arrives but already *N_SESSION* are being tracked, if *SESSION_ACCEPT_RESTART_TIME* nanoseconds since the last accepted session have passed, this new connection is taken into account, replacing the oldest one.
+The packets are stored in a Queue, meaning that they are automatically deleted when read (push/pop policy).
 
-Concerning the tracked sessions, I have used an LRU map thanks to when a new session should be inserted but there is not enough space, the oldest one (the one less accessed) is discarded. Thanks to this data structure, I do not have to worry about memory leaks or flushing the table.
-
-TODO: implement QUEUE support to avoid using indexed arrays + delete entries when requested + EGRESS datapath
+Reading the required features does not lock the map for the dataplane, which can continue monitoring incoming packets. This is thanks to an advance swap feature, which allow me to swap the required metric with a new appositely created one, letting the user completely unaware of what is going on.
 
 ## Crypto mining
 
@@ -54,35 +52,165 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-When the sessions map is full, the oldest entry is deleted, according to LRU map behaviour automatically implemented kernel-side.
+When the sessions map is full, the oldest entry is deleted, according to LRU policy which ensures that the oldest data is replaced when arriving new one.
 
-For each session, the following parameters are stored:
+For each session, the following parameters are stored both for *INGRESS* and *EGRESS* data path:
 
-* *n_packets_server*: number of packets received by the server
-* *n_packets_client*: number of packets received by the client
-* *n_bits_server*: total bits received from server
-* *n_bits_client*: total bits sent from client
-* *start_timestamp*: timestamp of the first received packet (when the connection has started)
-* *alive_timestamp*: timestamp of the last received packet
+* *n_packets*: number of passed packets
+* *n_bits*: total bits passed
+* *start_timestamp*: timestamp of the first passed packet
+* *alive_timestamp*: timestamp of the last passed packet
 
-TODO: implement time period + implement atomic batch lookup for lru maps + EGRESS datapath
+These parameter are then unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script, which retrieves data from the two data paths and creates the following structure:
+
+* *n_packets_server*: retrieved by the *EGRESS* path
+* *n_packets_client*: retrieved by the *INGRESS* path
+* *n_bits_server*: retrieved by the *EGRESS* path
+* *n_bits_client*: retrieved by the *INGRESS* path
+* *duration*: retrieved by the *INGRESS* path
+
+Once the metric is read, the map is completely erased.
+
+Reading the required features does not lock the map for the dataplane, which can continue monitoring incoming packets. This is thanks to an advance swap feature, which allow me to swap the required metric with a new appositely created one, letting the user completely unaware of what is going on.
+
+TODO: implement time period(?)
 
 ## Infrastructure Architecture
 
 Thanks to the [Dynmon](https://polycube-network.readthedocs.io/en/latest/services/pcn-dynmon/dynmon.html) service recently integrated in the framework, users
 are able to inject dynamically new eBPB code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
 
-Using the [dymon\_injector.py](./tools/dynmon_injector.py) script (src. [here](https://github.com/polycube-network/polycube/blob/master/src/services/pcn-dynmon/tools/dynmon_injector.py>)) a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations
-it has gathered. But what information? Those we tell the probe to gather. In fact both in [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json)  and [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature_extractor.json) files users not only insert their own code, but they also specify which metrics should be exported by the service.
+Using the [dymon\_injector.py](./tools/dynmon_injector.py) script a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations it has gathered. But what information? Those we tell the probe to gather. In fact both in [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json)  and [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature_extractor.json) files, users not only insert their own code, but they also specify which metrics should be exported by the service.
 
 The injectable code should be formatted and escaped accordingly to JSON format. To achieved that, an apposite python [formatter.py](./tools/formatter.py) script has been created.
 
-To extract the metrics from the monitor, there are multiple options, but the two most relevant are the following:
+To extract the metrics from the monitor, I created apposite scripts which contact Polycube via REST APIs.
+These scripts are:
 
-* querying the polycube daemon via command line interface (`polycubectl <monitor_name> show metrics`);
-* using one of the two python [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py) [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py), which will automatically store all the information in files.
+* [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py)
+* [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py)
 
-## Usage
+I recently integrated in Dynmon two vital features for this project:
+
+* the possibility to completely erase metric data when reading it
+* the possibility to ensure atomic metric read thanks to an advanced swapping technique.
+
+Thanks to these features, all our objectives can be achieved. When reading a metric, we don't want new values to be pushed into it, since it could lead to an infinite read-loop.
+If specified (as in our configurations), when a program containing a metric with the *swap* feature on is injected, a new parallel map is created. The program points alternatively to the native/fake map, letting the Control Plane to read the previously filled on. Those operations are atomic: reads are performed sequentially to ensure that swapping the metric is possibile only when the previous client has finished reading it.
+
+You can also tell Dynmon to erase the map after the read. Dynmon automatically understands the map type and, if supported, it delete all the entries. Deleting the entries means:
+
+* for a key-value map => deleting all the key-value entry
+* for an array map => zero-ing the value (if it is a user define data type like a struct, all the values are zero-ed).
+
+## Infrastructure Setup 
+
+### Polycube Requirements
+
+* OS: Ubuntu >= 18.04 (20.04 works fine)
+* Kernel: 5.4.0-33-generic
+* Disk space: >= 2.5 GB + needed space for output files
+* Memory: >= 100MB + X (where X is the size of the used BPF_MAP depending on parameters like: N°Sessions, N°Packets_per_session,...)
+
+### OS installation
+
+Download Ubuntu Focal Fossa from <https://releases.ubuntu.com/20.04/ubuntu-20.04-desktop-amd64.iso>.
+
+Installing OS in a physical device or in a VirtualMachine is up to you and it does not make difference for Polycube.
+
+### Kernel installation
+
+If you have a fresh Ubuntu 20.04 installation you should skip this session, since the kernel is already updated to the required version.
+
+Otherwise, you can use the following commands:
+
+```bash
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-headers-5.4.0-050400_5.4.0-050400.201911242031_all.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-headers-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-image-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-modules-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
+
+sudo dpkg -i *.deb
+sudo reboot
+```
+
+If the new kernel is not automatically chosen during the next boot, you should enter grub menu and select the right one.
+
+### Starting Polycube
+
+Download my personal Polycube image with all the latest features needed.
+
+```bash
+docker pull s41m0n/polycube:latest
+```
+
+Despite having a Docker container, Polycube needs linux headers from the hosts to compile and inject at lower layers (XDP/TC).
+Download `linux-headers` according to your kernel version.
+
+```bash
+sudo apt install linux-headers-$(uname -r)
+```
+
+Finally, Polycube can be now run using the following command:
+
+```bash
+docker run -p 9000:9000 --rm -it --privileged --network host \
+-v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro \
+s41m0n/polycube /bin/bash -c 'polycubed'
+```
+
+As you can see, the port 9000 has been forwarded to the Docker where the Polycube server is listening through a REST API.
+This way, other programs in your system can interact with Polycube using `http://localhost:9000/polycube/v1/.....`.
+
+If you prefer to use the Docker assigned IP (172.17.0.\*), remove the port binding.
+
+The running container is still attached to the command line where you launched it, to let the user see all the debug messages from Polycube (useful when dynamically injecting eBPF code and you are not 100% it will compile).
+
+Test connectivity with Polycube:
+
+```bash
+curl localhost:9000/polycube/v1
+```
+
+### Loading program (DDos/Crypto)
+
+The following scripts create a Dynmon instance with the specified configuration attached to the network interface `wlp59s0` (change it to yours).
+
+It automatically contacts Polycube at `localhost:9000` which, if you followed the previous sections, should be forwaded to the docker container where Polycube is actually running.
+
+#### DDos
+
+```bash
+./dynmon_injector.py monitor wlp59s0  ../src/ddos_detection/feature_extractor.json
+```
+
+### Crypto
+
+```bash
+./dynmon_injector.py monitor wlp59s0  ../src/crypto_mining/feature_extractor.json
+```
+
+### Extracting data (DDos/Crypto)
+
+The following scripts extract data from the Dynmon `monitor` instance previously created and generate outputs under `dump_crypto` and `dump_ddos` directories. If you want a more specific debug-like output, insert `--debug`.
+
+It automatically contacts Polycube at `localhost:9000` which, if you followed the previous sections, should be forwaded to the docker container where Polycube is actually running.
+
+For more accepted parameters (like interval between 2 read operation), type `--help`.
+
+### DDos
+
+```bash
+./dynmon_extractor_ddos.py monitor
+```
+
+### Crypto
+
+```bash
+./dynmon_extractor_crypto.py monitor
+```
+
+## General Usage
 
 Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [ddos_detection](./src/ddos_detection/feature_extractor.c) or [crypto_mining](./src/crypto_mining/feature_extractor.c) example.
 
@@ -97,7 +225,7 @@ In the code, you can use all data structures eBPF offers you. Later you can deci
 ### Step2 - Format code
 
 Once finished your program, you should escape it to be inserted inside one of [ddos_detection/feature\_extractor.json](./src/ddos_detection/feature_extractor.json) or [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature\_extractor.json) file under the `"code"` field. 
-Moreover, you should also specify in this file all the metrics (also OpenMetrics is supported) to be exported between the service and the outside world.
+Moreover, you should also specify in this file all the metrics (also OpenMetrics is supported) to be exported between the service and the outside world and their configurations.
 
 All the metrics `map_name` should refer to existing map you have previously declared in your eBPF C code, otherwise it will not be found.
 
@@ -128,11 +256,16 @@ The scrips are:
 * [dynmon_extractor_ddos.py](./tools/dynmon\_extractor\_ddos.py) 
 * [dynmon_extractor_crypto.py](./tools/dynmon\_extractor\_crypto.py) 
 
-In case you want to inspect packet per packet, by adding `--debug` the scripts will print each packet in different files identified by `srcIp-srcPort___dstIp-dstPort__timestamp.csv`. (This feature is actually supported only for ddos extractor) 
+The default output type uses the JSON format, but you can obtains CSV files by adding `--debug` as parameter to the scripts in order to better inspect data (as required).
 
 ## Test
 
-Under the [test](./test) directory there are all the used script and configuration file to perform an iPerf3 test.
+Under the [test](./test) directory there is the used script to perform an iPerf3 test.
+
+The input parameters are the following:
+
+* `-f <config_file>` the configuration file to be injected in the created Dynmon instance (the one to be tested, default [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json))
+* `-c <n_connessions>` the number of parallel connections to be opened to the server (default 1 using the entire bandwidth)
 
 Briefly, a Simplebridge service is created and two ports in two different network namespaces are assigned to it with the corresponding IP addressed:
 
@@ -183,7 +316,7 @@ By testing it using 1 unique session we achieve the folliwing result of **53.4 G
 iperf Done.
 ```
 
-If we try to parallelize multiple connection (`-P 10` for in the client command for example), we achieve a total **46.5 Gbits/sec** speed (all the parallel connections are launched in the same computer using the same resources so the performance worsening is reasonable). 
+If we try to parallelize multiple connection (`-c 10` for in the client command for example), we achieve a total **46.5 Gbits/sec** speed (all the parallel connections are launched in the same computer using the same resources so the performance worsening is reasonable). 
 
 ```bash
 - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -214,7 +347,7 @@ If we try to parallelize multiple connection (`-P 10` for in the client command 
 iperf Done.
 ```
 
-The tests have also been run with parallel connections (5) and a small session table (only 2 entries) to see how the program reacts to continuous entries substitution. The results are in line with those described before.
+The tests have also been run with parallel connections (5) and a small session table (only 10 entries) to see how the program reacts to continuous entries substitution. The results are in line with those described before.
 
 ## Pointers
 

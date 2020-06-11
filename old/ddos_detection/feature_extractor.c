@@ -13,11 +13,13 @@
 #define IPPROTO_ICMP 1
 
 /*Own control variables*/
-#define N_SESSION                   100             // Number of max TCP session tracked
-#define N_PACKET_PER_SESSION        100             // Number of packet from the same TCP session
+#define N_SESSION                   10              // Number of max TCP session tracked
+#define N_PACKET_PER_SESSION        10              // Number of packet from the same TCP session
 #define N_PACKET_TOTAL \
     N_SESSION * N_PACKET_PER_SESSION                // Number of max packet captured (Size of PACKET_BUFFER)
+#define SESSION_ACCEPT_RESTART_TIME 5000000000      // Seconds to wait before accepting new sessions
 #define SESSION_PACKET_RESTART_TIME 1000000000      // Seconds to wait before restarting to track packets from an already tracked session
+#define BUFFER_PACKET_RESTART_TIME  1000000000      // Seconds to wait before resetting the buffer (5 seconds)
 
 /*Session identifier*/
 struct session_key {
@@ -46,6 +48,14 @@ struct features {
     uint16_t tcpWin;                                //TCP window value
     uint8_t udpSize;                                //UDP payload length
     uint8_t icmpType;                               //ICMP operation type
+} __attribute__((packed));
+
+/*Structure containing info about capture*/
+struct capture_info {
+    unsigned int next_index;                        // The nex position in the PACKET_BUFFER to insert the packet
+    unsigned int n_session_tracking;                // Number of actual tracked sessions
+    uint64_t last_session_ins_tstamp;               // Timestamp of the last session inserted
+    uint64_t last_packet_ins_tstamp;                // Timestamp of the last packet inserted
 } __attribute__((packed));
 
 /*Ethernet Header => https://github.com/torvalds/linux/blob/master/include/uapi/linux/if_ether.h (slightly different)*/
@@ -141,19 +151,30 @@ struct icmphdr {
     } un;
 } __attribute__((packed));
 
-/*Structure shared between Control Plane - Data Plane*/
-BPF_QUEUE(PACKET_BUFFER, struct features, N_PACKET_TOTAL);
-
+/*Structures shared between Control Plane - Data Plane*/
+BPF_ARRAY(CAPTURE_INFO, struct capture_info, 1);
+BPF_ARRAY(PACKET_BUFFER, struct features, N_PACKET_TOTAL);
 /*Tracked session LRU map*/
 BPF_TABLE("lru_hash", struct session_key, struct session_value, SESSIONS_TRACKED, N_SESSION);
 
 /*Utility function to check if a session is already tracked and can take the current packet into account. If it is not tracked, try to do it.*/
-static __always_inline int check_or_try_add_session(struct session_key *key, uint64_t curr_time) {
+static __always_inline int check_or_try_add_session(struct session_key *key, struct capture_info *cinfo, uint64_t curr_time) {
   struct session_value *value = SESSIONS_TRACKED.lookup(key);
   if (!value) {
+    /*Check if I can accept new sessions*/
+    if(cinfo->n_session_tracking == N_SESSION) {
+      /*Check if the last session accepted was long time ago*/
+      if(curr_time - cinfo->last_session_ins_tstamp < SESSION_ACCEPT_RESTART_TIME) {
+        return 1;
+      }
+      /*Start accepting new session, OVERRIDING older ones*/
+      cinfo->n_session_tracking = 0; 
+    }
     /*New session accepted*/
     struct session_value newVal = {.last_ins_tstamp=curr_time, .n_packets=1};
     SESSIONS_TRACKED.insert(key, &newVal);
+    cinfo->n_session_tracking += 1;
+    cinfo->last_session_ins_tstamp = curr_time;
   } else {
     /*Checking if reached number of packets per session stored*/
     if(value->n_packets == N_PACKET_PER_SESSION) {
@@ -168,6 +189,17 @@ static __always_inline int check_or_try_add_session(struct session_key *key, uin
     value->last_ins_tstamp = curr_time;
     value->n_packets +=1;  
   }
+  return 0;
+}
+
+/*Function to update a PACKET_BUFFER entry*/
+static __always_inline int update_feature(int index, struct features *new_features) {
+  /*Retrieving current features slot*/
+  struct features *pkt_info =  PACKET_BUFFER.lookup(&index);
+  if (!pkt_info){
+      return 1;
+  }
+  *pkt_info = *new_features;
   return 0;
 }
 
@@ -196,13 +228,30 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     return RX_OK;
   }
 
+  /*Retrieving capture information*/
+  unsigned int key = 0;
+  struct capture_info *cinfo = CAPTURE_INFO.lookup(&key);
+  if (!cinfo){
+      return RX_OK;
+  }
+
+  /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
+  uint64_t curr_time = ctx->tstamp == 0? bpf_ktime_get_ns() : ctx->tstamp;
+
+  /*Checking if array of captured packets is full*/
+  if(cinfo->next_index == N_PACKET_TOTAL) {
+    /*Checking if last insertion happened 10s ago*/
+    if(curr_time - cinfo->last_packet_ins_tstamp < BUFFER_PACKET_RESTART_TIME) {
+      return RX_OK;
+    }
+    /*Reset head to zero to start extracting packet feature again*/
+    cinfo->next_index = 0;
+  }
+
   /*Calculating ip header length
    * value to multiply by 4 (SHL 2)
    *e.g. ip->ihl = 5 ; TCP Header starts at = 5 x 4 byte = 20 byte */
   uint8_t ip_header_len = ip->ihl << 2;
-  
-  /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
-  uint64_t curr_time = ctx->tstamp == 0? bpf_ktime_get_ns() : ctx->tstamp;
 
   switch (ip->protocol) {
     case IPPROTO_TCP: {
@@ -213,7 +262,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
       /*Check if it is already tracked or try to track it*/
       struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
-      if(check_or_try_add_session(&key, curr_time) != 0) {
+      if(check_or_try_add_session(&key, cinfo, curr_time) != 0) {
         return RX_OK;
       }
 
@@ -224,8 +273,9 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         .tcpFlags=(tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4)
                 | (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin};
       
-      /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     case IPPROTO_ICMP: {
@@ -237,7 +287,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Check if it is already tracked or try to track it*/
       struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=0, .dport=0, .proto=ip->protocol};
-      if(check_or_try_add_session(&key, curr_time) != 0) {
+      if(check_or_try_add_session(&key, cinfo, curr_time) != 0) {
         return RX_OK;
       }
 
@@ -245,8 +295,9 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .icmpType=icmp->type,
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     case IPPROTO_UDP: {
@@ -258,7 +309,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=udp->source, .dport=udp->dest, .proto=ip->protocol};
       /*Check if it is already tracked or try to track it*/
-      if(check_or_try_add_session(&key, curr_time) != 0) {
+      if(check_or_try_add_session(&key, cinfo, curr_time) != 0) {
         return RX_OK;
       }
 
@@ -266,8 +317,9 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .udpSize=bpf_ntohs(udp->len) - sizeof(*udp),
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      /*Try to upadte current PACKET_BUFFER entry with these new features*/
+      if(update_feature(cinfo->next_index, &new_features) != 0)
+        return RX_OK;
       break;
     }
     /*Should never reach this code since already checked*/
@@ -275,7 +327,11 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       return RX_OK;
     }
   }
+   
+  /*pcn_log(ctx, LOG_TRACE, "Inserted Packet at index: %u ", cinfo->next_index);*/
 
-  /* pcn_log(ctx, LOG_TRACE, "Successfully captured packet") */
+  /*The capture was fine, update last timestamp and index*/
+  cinfo->last_packet_ins_tstamp = curr_time;
+  cinfo->next_index += 1;
   return RX_OK;
 }

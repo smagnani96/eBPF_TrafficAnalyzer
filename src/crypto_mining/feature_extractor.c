@@ -16,10 +16,8 @@
 /*Features to be exported*/
 struct features {
     //Real features
-    uint64_t n_packets_server;                      // Number of packets sent from server
-    uint64_t n_packets_client;                      // Number of packets sent from client
-    uint64_t n_bits_server;                         // Total bits sent from server
-    uint64_t n_bits_client;                         // Total bits sent from client
+    uint64_t n_packets;                             // Number of packets
+    uint64_t n_bits;                                // Total bits
     uint64_t start_timestamp;                       // Connection begin timestamp
     uint64_t alive_timestamp;                       // Last message received timestamp
 } __attribute__((packed));
@@ -117,13 +115,12 @@ static __always_inline void update_session(struct CTXTYPE *ctx, struct session_k
   struct features *value = SESSIONS_TRACKED.lookup(key);
   if (!value) {
     /*New session accepted*/
-    struct features new_val = {.n_packets_server=1, .n_packets_client=0, .n_bits_server=pkt_len, 
-                                .n_bits_client=0, .start_timestamp=curr_time, .alive_timestamp=curr_time};
+    struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time};
     SESSIONS_TRACKED.insert(key, &new_val);
   } else {
     /*Already present session*/
-    value->n_packets_server += 1;
-    value->n_bits_server += pkt_len;
+    value->n_packets += 1;
+    value->n_bits += pkt_len;
     value->alive_timestamp = curr_time;
   }
 }

@@ -94,7 +94,7 @@ def checkIfServiceExists(cube_name):
 def injectNewDataplane(cube_name, dataplane):
     try:
         print('Injecting the new dataplane')
-        response = requests.put(f'{polycubed_endpoint}/dynmon/{cube_name}/dataplane',
+        response = requests.put(f'{polycubed_endpoint}/dynmon/{cube_name}/dataplane-config',
                                 json.dumps(dataplane),
                                 timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
@@ -115,8 +115,8 @@ def injectNewDataplane(cube_name, dataplane):
 def createInstance(cube_name, dataplane):
     try:
         print(f'Creating new dynmon instance named {cube_name}')
-        response = requests.put(f'{polycubed_endpoint}/dynmon/{cube_name}',
-                                json.dumps({'dataplane': dataplane}),
+        response = requests.post(f'{polycubed_endpoint}/dynmon/{cube_name}',
+                                json.dumps({'dataplane-config': dataplane}),
                                 timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
     except requests.exceptions.HTTPError:

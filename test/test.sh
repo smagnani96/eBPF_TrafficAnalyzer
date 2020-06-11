@@ -2,6 +2,9 @@
 set -x
 set -e
 
+test_file="../src/ddos_detection/feature_extractor.json"
+n_connections=1
+
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 
    exit 1
@@ -35,33 +38,39 @@ function cleanup {
     sudo pkill iperf3
 }
 
+function parse {
+  while getopts "f:c:" opt; do
+    case $opt in
+      f) 
+        test_file=$OPTARG
+        ;;
+      c)
+        n_connections=$OPTARG
+        ;;
+    esac
+  done
+}
 function main {
-	
-	trap cleanup EXIT
+  
+  parse $@
+  
+  trap cleanup EXIT
 
-	create_veth 2
+  create_veth 2
 
-	polycubectl simplebridge add br1
+  polycubectl simplebridge add br1
 
-	polycubectl simplebridge br1 ports add port1
-	polycubectl simplebridge br1 ports add port2
+  polycubectl simplebridge br1 ports add port1 peer=veth1
+  polycubectl simplebridge br1 ports add port2 peer=veth2
 
-	polycubectl connect br1:port1 veth1
-	polycubectl connect br1:port2 veth2
-
-	sleep 1
-	../tools/dynmon_injector.py monitor br1:port1 test.json
-	sleep 1
-
-	sudo ip netns exec ns2 iperf3 -s &>/dev/null &
+  sleep 1
+  ../tools/dynmon_injector.py monitor br1:port1 $test_file
   sleep 1
 
-  n_connections=1
-  if [ -n "$1" ]; then
-    n_connections=$1
-  fi
+  sudo ip netns exec ns2 iperf3 -s &>/dev/null &
+  sleep 1
 
-	sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 30 -P $n_connections
+  sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 30 -P $n_connections
 }
 
 main $@
