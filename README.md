@@ -136,6 +136,28 @@ sudo reboot
 
 If the new kernel is not automatically chosen during the next boot, you should enter grub menu and select the right one.
 
+### Automatic environment setup
+
+The script [setup_environment.sh](./setup_environment.sh) manages and launches every resource needed to setup:
+
+* Polycube daemon in a docker
+* The DDos monitor (named `monitor_ddos`)
+* The Crypto monitor (named `monitor_crypto`)
+* The Firewall (named `fw`) with the default `FORWARD` policy
+
+The final architecture will be something like:
+
+```bash
+                                                               +-----------+   
+                          +----+----------------+--------------+           |   
+ ---|INTERNET|------------| fw | monitor_crypto | monitor_ddos | Interface |-----|User_Device|
+                          +----+----------------+--------------+  wlp59s0  |   
+                                                               +-----------+  
+```
+
+Otherwise, if you prefer to manually set it up with custom names you can continue to read the following section.
+
+
 ### Starting Polycube
 
 Download my personal Polycube image with all the latest features needed.

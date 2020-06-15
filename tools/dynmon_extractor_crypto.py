@@ -5,7 +5,7 @@ import time, threading, argparse, requests, json, socket, os, ipaddress, errno
 from datetime import datetime
 from collections.abc import Sequence
 
-VERSION = '1.0'
+VERSION = '1.1'
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 10
