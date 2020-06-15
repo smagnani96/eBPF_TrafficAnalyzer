@@ -29,7 +29,6 @@ def main():
 
 	polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
-	checkIfServiceExists(cube_name)
 	checkIfOutputDirExists(output_dir)
 	
 	dynmonConsume(cube_name, output_dir, interval, debug)
@@ -42,72 +41,23 @@ def dynmonConsume(cube_name, output_dir, interval, debug):
 	counter += 1
 	
 	start_time = time.time()
-	res =  getMetrics(cube_name)
+	metric =  getMetric(cube_name)
 	req_time = time.time()
 	
 	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, debug)).start()
 
-	ingress = res['ingress-metrics'][0]['value'] if res['ingress-metrics'][0]['value'] is not None else []
-	egress = res['egress-metrics'][0]['value'] if res['egress-metrics'][0]['value'] is not None else []
-
-	if not ingress and not egress:
+	if not metric:
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
 	data = {}
-	parseIngress(ingress, data)
-	parseEgress(egress, data)
-	dumpData(data, output_dir, my_count, debug)
+	parseAndStore(metric, output_dir, my_count) if debug is False else parseAndStoreDebug(metric, output_dir, my_count)	
 	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 
 
-def dumpData(data, output_dir, counter, debug):
-	if debug: 
-		file = open(f"{output_dir}/result_{counter}.csv", 'w')
-		file.write("Timestamp, IP Client, IP Server, Port Client, Port Server, Protocol, Server Method, Packets_ server, Packets_"
-			"client, Bits_ server, Bits_ client, Duration, Packets_ server /Seconds,Packets_ client /Seconds, Bits_ server"
-			"Seconds, Bits_client /Seconds, Bits _server / Packets _server, Bits _client / Packets _client, Packets_server"
-			"Packets_client, Bits_server /Bits_client\n")
-		for key, value in data.items():
-			n_packets_client = value['n_packets_client']
-			n_packets_server = value['n_packets_server']
-			n_bits_server = value['n_bits_server']
-			n_bits_client = value['n_bits_client']
-			duration = value['duration']
-			print(key)
-			file.write(f"{time.time()}, {', '.join(map(str, key))}, 1, {n_packets_server}, {n_packets_client}, "
-				f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,duration)}, {makeDivision(n_packets_client,duration)}, "
-				f"{makeDivision(n_bits_server,duration)}, {makeDivision(n_bits_client,duration)}, {makeDivision(n_bits_server,n_packets_server)}, "
-				f"{makeDivision(n_bits_client,n_packets_client)}, {makeDivision(n_packets_server,n_packets_client)}, {makeDivision(n_bits_server,n_bits_client)}\n")
-		file.close()	
-	else:
-		parsed = []
-		for key, value in data.items():
-			parsed.append({"id": key, "features": value})
-		with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
-			json.dump(parsed, fp, indent=2)
-
-def parseEgress(entries, conn):
-	for entry in entries:
-		key = entry['key']
-		value = entry['value']
-		connIdentifier = (
-			socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
-			socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
-			socket.ntohs(key['dport']),
-			socket.ntohs(key['sport']),
-			key['proto'])
-		if connIdentifier in conn:
-			conn[connIdentifier]["n_packets_server"] = value['n_packets']
-			conn[connIdentifier]["n_bits_server"] = value['n_bits']
-		else:
-			conn[connIdentifier] = {
-				"n_packets_server": value['n_packets'],
-				"n_bits_server": value['n_bits']}
-
-
-def parseIngress(entries, conn):
-	for entry in entries:
+def parseAndStore(metric, output_dir, counter):
+	parsed = []
+	for entry in metric:
 		key = entry['key']
 		value = entry['value']
 		connIdentifier = (
@@ -116,15 +66,40 @@ def parseIngress(entries, conn):
 			socket.ntohs(key['sport']),
 			socket.ntohs(key['dport']),
 			key['proto'])
-		if connIdentifier in conn:
-			conn[connIdentifier]["n_packets_client"] = value['n_packets']
-			conn[connIdentifier]["n_bits_client"] = value['n_bits']
-			conn[connIdentifier]["duration"] = value['alive_timestamp'] - value['start_timestamp']
-		else:
-			conn[connIdentifier] = {
-				"n_packets_client": value['n_packets'],
-				"n_bits_client": value['n_bits'],
-				"duration": value['alive_timestamp'] - value['start_timestamp']}
+		duration = value['alive_timestamp'] - value['start_timestamp']
+		del value['alive_timestamp']
+		del value['start_timestamp']
+		value['duration'] = duration
+		parsed.append({"id": connIdentifier, "features": value})
+	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
+		json.dump(parsed, fp, indent=2)
+
+
+def parseAndStoreDebug(metric, output_dir, my_count):
+	file = open(f"{output_dir}/result_{counter}.csv", 'w')
+	file.write("Timestamp, IP Client, IP Server, Port Client, Port Server, Protocol, Server Method, Packets_ server, Packets_"
+		"client, Bits_ server, Bits_ client, Duration, Packets_ server /Seconds,Packets_ client /Seconds, Bits_ server"
+		"Seconds, Bits_client /Seconds, Bits _server / Packets _server, Bits _client / Packets _client, Packets_server"
+		"Packets_client, Bits_server /Bits_client\n")
+	for entry in metric:
+		key = entry['key']
+		value = entry['value']
+		connIdentifier = (
+			socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
+			socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
+			socket.ntohs(key['sport']),
+			socket.ntohs(key['dport']),
+			key['proto'])
+		n_packets_client = value['n_packets_client']
+		n_packets_server = value['n_packets_server']
+		n_bits_server = value['n_bits_server']
+		n_bits_client = value['n_bits_client']
+		duration = value['alive_timestamp'] - value['start_timestamp']
+		file.write(f"{time.time()}, {', '.join(map(str, connIdentifier))}, 1, {n_packets_server}, {n_packets_client}, "
+			f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,duration)}, {makeDivision(n_packets_client,duration)}, "
+			f"{makeDivision(n_bits_server,duration)}, {makeDivision(n_bits_client,duration)}, {makeDivision(n_bits_server,n_packets_server)}, "
+			f"{makeDivision(n_bits_client,n_packets_client)}, {makeDivision(n_packets_server,n_packets_client)}, {makeDivision(n_bits_server,n_bits_client)}\n")
+	file.close()	
 
 
 def makeDivision(i, j):
@@ -142,27 +117,9 @@ def checkIfOutputDirExists(output_dir):
 		print (f"Successfully created the directory {output_dir}")
 
 
-def checkIfServiceExists(cube_name):
+def getMetric(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}', timeout=REQUESTS_TIMEOUT)
-		response.raise_for_status()
-	except requests.exceptions.HTTPError:
-		print('Error: the desired cube does not exist.')
-		exit(1)
-	except requests.exceptions.ConnectionError:
-		print('Connection error: unable to connect to polycube daemon.')
-		exit(1)
-	except requests.exceptions.Timeout:
-		print('Timeout error: unable to connect to polycube daemon.')
-		exit(1)
-	except requests.exceptions.RequestException:
-		print('Error: unable to connect to polycube daemon.')
-		exit(1)
-
-
-def getMetrics(cube_name):
-	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/SESSIONS_TRACKED_CRYPTO/value', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)

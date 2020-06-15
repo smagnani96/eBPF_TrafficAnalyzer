@@ -16,8 +16,10 @@
 /*Features to be exported*/
 struct features {
     //Real features
-    uint64_t n_packets;                             // Number of packets
-    uint64_t n_bits;                                // Total bits
+    uint64_t n_packets_server;                      // Number of packets from server
+    uint64_t n_packets_client;                      // Number of packets from client
+    uint64_t n_bits_server;                         // Total bits from server
+    uint64_t n_bits_client;                         // Total bits from client
     uint64_t start_timestamp;                       // Connection begin timestamp
     uint64_t alive_timestamp;                       // Last message received timestamp
 } __attribute__((packed));
@@ -106,22 +108,25 @@ struct udphdr {
 } __attribute__((packed));
 
 /*Tracked session LRU map*/
-BPF_TABLE("lru_hash", struct session_key, struct features, SESSIONS_TRACKED, N_SESSION);
+BPF_TABLE("extern", struct session_key, struct features, SESSIONS_TRACKED_CRYPTO, N_SESSION);
 
 static __always_inline void update_session(struct CTXTYPE *ctx, struct session_key *key, uint16_t pkt_len) {
   /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
   uint64_t curr_time = ctx->tstamp == 0? bpf_ktime_get_ns() : ctx->tstamp;
 
-  struct features *value = SESSIONS_TRACKED.lookup(key);
+  struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(key);
   if (!value) {
     /*New session accepted*/
-    struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time};
-    SESSIONS_TRACKED.insert(key, &new_val);
+    struct features new_val = {.n_packets_server=1, .n_bits_server=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time};
+    SESSIONS_TRACKED_CRYPTO.insert(key, &new_val);
   } else {
     /*Already present session*/
-    value->n_packets += 1;
-    value->n_bits += pkt_len;
+    value->n_packets_server += 1;
+    value->n_bits_server += pkt_len;
     value->alive_timestamp = curr_time;
+    if(value->start_timestamp == 0) {
+     value->start_timestamp = curr_time; 
+    }
   }
 }
 
@@ -156,7 +161,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if ((void *) tcp + sizeof(*tcp) > data_end)
         return RX_OK;
 
-      struct session_key key = {.saddr=ip->saddr, .daddr= ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
+      struct session_key key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
       update_session(ctx, &key, bpf_ntohs(ip->tot_len));
       break;
     }
@@ -167,7 +172,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         return RX_OK;
       }
 
-      struct session_key key = {.saddr=ip->saddr, .daddr= ip->daddr, .sport=udp->source, .dport=udp->dest, .proto=ip->protocol};
+      struct session_key key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
       update_session(ctx, &key, bpf_ntohs(ip->tot_len));
       break;
     }

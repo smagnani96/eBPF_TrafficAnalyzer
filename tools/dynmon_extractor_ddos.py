@@ -29,7 +29,6 @@ def main():
 
 	polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
-	checkIfServiceExists(cube_name)
 	checkIfOutputDirExists(output_dir)
 
 	dynmonConsume(cube_name, output_dir, interval, debug)
@@ -42,20 +41,17 @@ def dynmonConsume(cube_name, output_dir, interval, debug):
 	counter += 1
 	
 	start_time = time.time()
-	res =  getMetrics(cube_name)
+	metric =  getMetric(cube_name)
 	req_time = time.time()
 
 	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, debug)).start()
 
-	ingress = res['ingress-metrics'][0]['value'] if res['ingress-metrics'][0]['value'] is not None else []
-	egress = res['egress-metrics'][0]['value'] if res['egress-metrics'][0]['value'] is not None else []
-
-	if not ingress and not egress:
+	if not metric:
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
-	parseAndStore(ingress+egress, output_dir, my_count) if debug is False else parseAndStoreDebug(ingress+egress, output_dir, my_count)	
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+	parseAndStore(metric, output_dir, my_count) if debug is False else parseAndStoreDebug(metric, output_dir, my_count)	
+	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(metric)}')
 
 
 def parseAndStore(entries, output_dir, counter):
@@ -116,27 +112,9 @@ def checkIfOutputDirExists(output_dir):
 		print (f"Successfully created the directory {output_dir}")
 
 
-def checkIfServiceExists(cube_name):
+def getMetric(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}', timeout=REQUESTS_TIMEOUT)
-		response.raise_for_status()
-	except requests.exceptions.HTTPError:
-		print('Error: the desired cube does not exist.')
-		exit(1)
-	except requests.exceptions.ConnectionError:
-		print('Connection error: unable to connect to polycube daemon.')
-		exit(1)
-	except requests.exceptions.Timeout:
-		print('Timeout error: unable to connect to polycube daemon.')
-		exit(1)
-	except requests.exceptions.RequestException:
-		print('Error: unable to connect to polycube daemon.')
-		exit(1)
-
-
-def getMetrics(cube_name):
-	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/PACKET_BUFFER/value', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)
