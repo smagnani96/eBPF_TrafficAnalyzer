@@ -142,7 +142,7 @@ struct icmphdr {
 } __attribute__((packed));
 
 /*Structure shared between Control Plane - Data Plane*/
-BPF_QUEUESTACK_SHARED("queue",PACKET_BUFFER, struct features, N_PACKET_TOTAL, 0);
+BPF_QUEUESTACK_SHARED("queue",PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
 
 /*Tracked session LRU map*/
 BPF_TABLE_SHARED("lru_hash", struct session_key, struct session_value, SESSIONS_TRACKED_DDOS, N_SESSION);
@@ -225,7 +225,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
                 | (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin};
       
       /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
     case IPPROTO_ICMP: {
@@ -246,7 +246,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
       /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
     case IPPROTO_UDP: {
@@ -267,7 +267,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
       /*Try to push those features into PACKET_BUFFER*/
-      PACKET_BUFFER.push(&new_features, 0);
+      PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
     /*Should never reach this code since already checked*/

@@ -114,7 +114,7 @@ def checkIfOutputDirExists(output_dir):
 
 def getMetric(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/PACKET_BUFFER/value', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/PACKET_BUFFER_DDOS/value', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)

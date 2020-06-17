@@ -56,24 +56,19 @@ When the sessions map is full, the oldest entry is deleted, according to LRU pol
 
 For each session, the following parameters are stored both for *INGRESS* and *EGRESS* data path:
 
-* *n_packets*: number of passed packets
-* *n_bits*: total bits passed
+* *n_packets_server*
+* *n_packets_client*
+* *n_bits_server*
+* *n_bits_client*
 * *start_timestamp*: timestamp of the first passed packet
 * *alive_timestamp*: timestamp of the last passed packet
+* *method*: the method used to understand which is the server in the communication
 
-These parameter are then unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script, which retrieves data from the two data paths and creates the following structure:
+The methods to heuristically find out which is the server are the following:
 
-* *n_packets_server*: retrieved by the *EGRESS* path
-* *n_packets_client*: retrieved by the *INGRESS* path
-* *n_bits_server*: retrieved by the *EGRESS* path
-* *n_bits_client*: retrieved by the *INGRESS* path
-* *duration*: retrieved by the *INGRESS* path
-
-Once the metric is read, the map is completely erased.
-
-Reading the required features does not lock the map for the dataplane, which can continue monitoring incoming packets. This is thanks to an advance swap feature, which allow me to swap the required metric with a new appositely created one, letting the user completely unaware of what is going on.
-
-TODO: implement time period(?)
+* if TCP communication and TCP->SYN detected, then the destination IP is the server 
+* if destination port < 1024, then destination IP is the server
+* otherwise choose randomly
 
 ## Infrastructure Architecture
 
