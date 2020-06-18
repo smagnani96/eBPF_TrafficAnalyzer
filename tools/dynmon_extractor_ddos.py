@@ -47,59 +47,64 @@ def dynmonConsume(cube_name, output_dir, interval, debug):
 	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, debug)).start()
 
 	if not metric:
-		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)') if debug else None
 		return
 
-	parseAndStore(metric, output_dir, my_count) if debug is False else parseAndStoreDebug(metric, output_dir, my_count)	
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(metric)}')
+	parseAndStore(metric, output_dir, my_count)	
+	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(metric)}') if debug else None
 
 
 def parseAndStore(entries, output_dir, counter):
-	data = []
 	flows = {}
+	# TODO: modify output in same file for the same connection
 	for entry in entries:
+		seconds = entry['timestamp'] // 1000000000
+		nanoseconds = str(entry['timestamp'])[:9]
 		sid = entry['id']
 		srcIp = socket.inet_ntoa(sid['saddr'].to_bytes(4, 'little'))
 		dstIp = socket.inet_ntoa(sid['daddr'].to_bytes(4, 'little'))
 		srcPort = socket.ntohs(sid['sport'])
 		dstPort = socket.ntohs(sid['dport'])
 		flowIdentifier = (srcIp, srcPort, dstIp, dstPort, sid['proto'])
-		features = []
-		for key, value in entry.items():
-			if key != 'id':
-				features.append(value)
+		
 		if flowIdentifier in flows:
-			flows[flowIdentifier].append(features)
+			flows[flowIdentifier]['seconds'].append(seconds)
+			flows[flowIdentifier]['nanoseconds'].append(nanoseconds)
+			flows[flowIdentifier]['length'].append(entry['length'])
+			flows[flowIdentifier]['ipFlagsFrag'].append(entry['ipFlagsFrag'])
+			flows[flowIdentifier]['tcpLen'].append(entry['tcpLen'])
+			flows[flowIdentifier]['tcpAck'].append(entry['tcpAck'])
+			flows[flowIdentifier]['tcpFlags'].append(entry['tcpFlags'])
+			flows[flowIdentifier]['tcpWin'].append(entry['tcpWin'])
+			flows[flowIdentifier]['udpSize'].append(entry['udpSize'])
+			flows[flowIdentifier]['icmpType'].append(entry['icmpType'])
 		else:
-			flows[flowIdentifier] = [features]
+			flows[flowIdentifier] = {
+				'seconds': 		[seconds],
+				'nanoseconds':  [nanoseconds],
+				'length':      	[entry['length']],
+				'ipFlagsFrag':	[entry['ipFlagsFrag']],
+				'tcpLen':		[entry['tcpLen']],
+				'tcpAck':		[entry['tcpAck']],
+				'tcpFlags':		[entry['tcpFlags']],
+				'tcpWin':		[entry['tcpWin']],
+				'udpSize':		[entry['udpSize']],
+				'icmpType':		[entry['icmpType']]
+			}
+
 	for key, value in flows.items():
-		data.append({"id": key, "packets": value})
-	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
-		json.dump(data, fp, indent=2)
-
-
-def parseAndStoreDebug(entries, output_dir, counter):
-	for entry in entries:
-		timestamp = entry['timestamp']
-		seconds = timestamp // 1000000000
-		nanoseconds = str(timestamp)[:9]
-		sid = entry['id']
-		srcIp = socket.inet_ntoa(sid['saddr'].to_bytes(4, 'little'))
-		dstIp = socket.inet_ntoa(sid['daddr'].to_bytes(4, 'little'))
-		srcPort = socket.ntohs(sid['sport'])
-		dstPort = socket.ntohs(sid['dport'])
-		file = open(f"{output_dir}/{srcIp}-{srcPort}___{dstIp}-{dstPort}___{timestamp}.csv", 'w')
-		file.write(f"Seconds     ,\t{seconds}\n"
-			f"Ns          ,\t{nanoseconds}\n"
-			f"Length      ,\t{entry['length']}\n"
-			f"IPv4 flags  ,\t{entry['ipFlagsFrag']}\n"
-			f"TCP len     ,\t{entry['tcpLen']}\n"
-			f"TCP ACK     ,\t{entry['tcpAck']}\n"
-			f"TCP flags   ,\t{entry['tcpFlags']}\n"
-			f"TCP Win     ,\t{entry['tcpWin']}\n"
-			f"UDP len     ,\t{entry['udpSize']}\n"
-			f"ICMP type   ,\t{entry['icmpType']}")
-		file.close()
+		with open(f"{output_dir}/{key[0]}-{key[1]}___{key[2]}-{key[3]}___{key[4]}-iter{counter}.csv", 'w') as fp:
+			fp.write(""
+				f"Seconds     ,\t{', '.join(map(str,value['seconds']))}\n"
+				f"Ns          ,\t{', '.join(map(str,value['nanoseconds']))}\n"
+				f"Length      ,\t{', '.join(map(str,value['length']))}\n"
+				f"IPv4 flags  ,\t{', '.join(map(str,value['ipFlagsFrag']))}\n"
+				f"TCP len     ,\t{', '.join(map(str,value['tcpLen']))}\n"
+				f"TCP ACK     ,\t{', '.join(map(str,value['tcpAck']))}\n"
+				f"TCP flags   ,\t{', '.join(map(str,value['tcpFlags']))}\n"
+				f"TCP Win     ,\t{', '.join(map(str,value['tcpWin']))}\n"
+				f"UDP len     ,\t{', '.join(map(str,value['udpSize']))}\n"
+				f"ICMP type   ,\t{', '.join(map(str,value['icmpType']))}")
 
 def checkIfOutputDirExists(output_dir):
 	try:

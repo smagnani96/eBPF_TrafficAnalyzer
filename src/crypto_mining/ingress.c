@@ -127,6 +127,11 @@ static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcph
     return ip->daddr;
   }
 
+  if(tcp->source < 1024) {
+    *method = 2;
+    return ip->saddr;
+  }
+
   *method = 3;
   /*Otherwise, randomly pick*/
   return curr_time % 2 ? ip->saddr : ip->daddr;
@@ -137,6 +142,11 @@ static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udph
   if(udp->dest < 1024) {
     *method = 2;
     return ip->daddr;
+  }
+
+  if(udp->source < 1024) {
+    *method = 2;
+    return ip->saddr;
   }
 
   *method = 3;
