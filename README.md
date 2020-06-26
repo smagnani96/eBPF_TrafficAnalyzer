@@ -103,7 +103,7 @@ You can also tell Dynmon to erase the map after the read. Dynmon automatically u
 ### Polycube Requirements
 
 * OS: Ubuntu >= 18.04 (20.04 works fine)
-* Kernel: 5.4.0-33-generic
+* Kernel: 5.7.0 (also 5.4.0-33-generic is good, but map extraction can be slower due to some features missing)
 * Disk space: >= 2.5 GB + needed space for output files
 * Memory: >= 100MB + X (where X is the size of the used BPF_MAP depending on parameters like: N°Sessions, N°Packets_per_session,...)
 
@@ -115,15 +115,15 @@ Installing OS in a physical device or in a VirtualMachine is up to you and it do
 
 ### Kernel installation
 
-If you have a fresh Ubuntu 20.04 installation you should skip this session, since the kernel is already updated to the required version.
+If you have a fresh Ubuntu 20.04 installation and you want to keep the kernel v5.4.0 you should skip this session
 
-Otherwise, you can use the following commands:
+Otherwise, to update to v.5.7.0 you can use the following commands:
 
 ```bash
-wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-headers-5.4.0-050400_5.4.0-050400.201911242031_all.deb
-wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-headers-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
-wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-image-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
-wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.4/linux-modules-5.4.0-050400-generic_5.4.0-050400.201911242031_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.7/amd64/linux-headers-5.7.0-050700_5.7.0-050700.202006082127_all.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.7/amd64/linux-headers-5.7.0-050700-generic_5.7.0-050700.202006082127_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.7/amd64/linux-image-unsigned-5.7.0-050700-generic_5.7.0-050700.202006082127_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v5.7/amd64/linux-modules-5.7.0-050700-generic_5.7.0-050700.202006082127_amd64.deb
 
 sudo dpkg -i *.deb
 sudo reboot
