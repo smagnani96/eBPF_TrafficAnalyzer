@@ -6,7 +6,7 @@ Highly recommended to be used within the [Polycube](https://github.com/polycube-
 
 ## DDos detection
 
-This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detection/feature_extractor.c) program related to DDos detection.
+This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detection) program related to DDos detection.
 
 The following parameters are vital:
 
@@ -39,7 +39,7 @@ Reading the required features does not lock the map for the dataplane, which can
 
 ## Crypto mining
 
-This section covers the [crypto_mining/feature\_extractor.c](./src/crypto_mining/feature_extractor.c) program related to Crypto Mining detection.
+This section covers the [crypto_mining/feature\_extractor.c](./src/crypto_mining) program related to Crypto Mining detection.
 
 The only parameter vital to the program is *N_SESSION*, which represents the max number of sessions tracked.
 
@@ -229,7 +229,7 @@ For more accepted parameters (like interval between 2 read operation), type `--h
 
 ## General Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [ddos_detection](./src/ddos_detection/feature_extractor.c) or [crypto_mining](./src/crypto_mining/feature_extractor.c) example.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [ddos_detection](./src/ddos_detection) or [crypto_mining](./src/crypto_mining) example.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 
