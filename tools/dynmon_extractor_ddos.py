@@ -56,7 +56,6 @@ def dynmonConsume(cube_name, output_dir, interval, debug):
 
 def parseAndStore(entries, output_dir, counter):
 	flows = {}
-	# TODO: modify output in same file for the same connection
 	for entry in entries:
 		seconds = entry['timestamp'] // 1000000000
 		nanoseconds = str(entry['timestamp'])[:9]
@@ -92,6 +91,57 @@ def parseAndStore(entries, output_dir, counter):
 				'icmpType':		[entry['icmpType']]
 			}
 
+	'''
+	NOW YOU HAVE `flows` THAT IS A DICTIONARY DATA STRUCTURE optimized for printing:
+	{
+		"id": (1.1.1.1, 2.2.2.2, 443, 443, 1),
+		"seconds": [...],
+		"nanoseconds": [...],
+		...
+	}
+	WHERE EVERY ELEMENT OF THE ARRAYS CORRESPOND TO A SINGLE PACKET (IF YOU READ ALL THE COLUMS AT ONCE YOU GET THE PACKET FEATURES).
+
+	IF YOU PREFER TO HAVE SOMETHING LIKE:
+	{
+		"id": (1.1.1.1, 2.2.2.2, 443, 443, 1),
+		"packets": [
+			{
+				"seconds": 1,
+				"nanoseconds": 1,
+				...
+			},
+			{
+				"seconds": 2,
+				"nanoseconds": 2,
+				...
+			},
+		]
+	}
+	PLEASE USE THE FOLLOWING CODE:
+
+	data = []
+	flows = {}
+	for entry in entries:
+		sid = entry['id']
+		srcIp = socket.inet_ntoa(sid['saddr'].to_bytes(4, 'little'))
+		dstIp = socket.inet_ntoa(sid['daddr'].to_bytes(4, 'little'))
+		srcPort = socket.ntohs(sid['sport'])
+		dstPort = socket.ntohs(sid['dport'])
+		flowIdentifier = (srcIp, srcPort, dstIp, dstPort, sid['proto'])
+		features = []
+		for key, value in entry.items():
+			if key != 'id':
+				features.append(value)
+		if flowIdentifier in flows:
+			flows[flowIdentifier].append(features)
+		else:
+			flows[flowIdentifier] = [features]
+	for key, value in flows.items():
+		data.append({"id": key, "packets": value})
+-----------------------------------------------------------------------------------
+
+	THE FOLLOWING CODE PRINTS THE VALUES TO FILE, REMOVE THEM AND INSERT YOUR INTERACTIONS IN THE FINAL VERSION.
+	'''
 	for key, value in flows.items():
 		with open(f"{output_dir}/{key[0]}-{key[1]}___{key[2]}-{key[3]}___{key[4]}-iter{counter}.csv", 'w') as fp:
 			fp.write(""

@@ -65,9 +65,6 @@ def parseAndStore(metric, interval, curr_time, my_count):
 		if value['alive_timestamp'] < curr_time - interval:
 			continue
 
-		print(entry)
-		print(curr_time)
-		exit()
 		if value['server_ip'] == key['saddr']:
 			connIdentifier = (
 				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
