@@ -118,16 +118,17 @@ static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcph
   /*If receive Syn, then srcIp is the server*/
   if(tcp->syn) {
     *method = 1;
-    return ip->saddr;
+    return tcp->ack? ip->saddr : ip->daddr;
   }
 
   /*If destination port < 1024, then dstIp is the server*/
-  if(tcp->dest < 1024) {
+  if(bpf_htons(tcp->dest) < 1024) {
     *method = 2;
     return ip->daddr;
   }
 
-  if(tcp->source < 1024) {
+  /*If source port < 1024, then srcIp is the server*/
+  if(bpf_htons(tcp->source) < 1024) {
     *method = 2;
     return ip->saddr;
   }
@@ -139,15 +140,17 @@ static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcph
 
 static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint64_t curr_time, uint8_t *method) {
   /*If destination port < 1024, then dstIp is the server*/
-  if(udp->dest < 1024) {
+  if(bpf_htons(udp->dest) < 1024) {
     *method = 2;
     return ip->daddr;
   }
 
-  if(udp->source < 1024) {
+  /*If source port < 1024, then srcIp is the server*/
+  if(bpf_htons(udp->source) < 1024) {
     *method = 2;
     return ip->saddr;
   }
+
 
   *method = 3;
   /*Otherwise, randomly pick*/
@@ -225,6 +228,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       /*Check if new session*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
       if (!value) {
+        pcn_log(ctx, LOG_DEBUG, "INGRESS - TCP New session");
         uint8_t method;
         __be32 server = heuristic_server_tcp(ip, tcp, curr_time, &method);
         insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
@@ -233,6 +237,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Check if the entry was too old => overwrite it*/
       if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
+        pcn_log(ctx, LOG_DEBUG, "INGRESS - TCP Session overwritten");
         uint8_t method;
         __be32 server = heuristic_server_tcp(ip, tcp, curr_time, &method);
         update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
@@ -241,6 +246,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Update current session*/
       update_session(value, pkt_len, curr_time, value->server_ip==ip->saddr);
+      pcn_log(ctx, LOG_DEBUG, "INGRESS - TCP Session updated");
       break;
     }
     case IPPROTO_UDP: {
@@ -258,6 +264,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       /*Check if new session*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
       if (!value) {
+        pcn_log(ctx, LOG_DEBUG, "INGRESS - UDP New session");
         uint8_t method;
         __be32 server = heuristic_server_udp(ip, udp, curr_time, &method);
         insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
@@ -266,6 +273,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Check if the entry was too old => overwrite it*/
       if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
+        pcn_log(ctx, LOG_DEBUG, "INGRESS - UDP Session overwritten");
         uint8_t method;
         __be32 server = heuristic_server_udp(ip, udp, curr_time, &method);
         update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
@@ -274,6 +282,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Update current session*/
       update_session(value, pkt_len, curr_time, value->server_ip==ip->saddr);
+      pcn_log(ctx, LOG_DEBUG, "INGRESS - UDP Session updated");
       break;
     }
     /*Ignored protocol*/
