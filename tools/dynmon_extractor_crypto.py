@@ -10,6 +10,7 @@ POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 10
 INTERVAL = 2 # seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
+local_dict = {}
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 counter = 0
@@ -41,8 +42,6 @@ def dynmonConsume(cube_name, interval, interval_ns, debug):
 	my_count = counter
 	counter += 1
 	
-	# TODO: the timestampt works if executed on the same machine,
-	curr_time = time.perf_counter_ns()
 	start_time = time.time()
 	metric =  getMetric(cube_name)
 	req_time = time.time()
@@ -53,18 +52,15 @@ def dynmonConsume(cube_name, interval, interval_ns, debug):
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)') if debug else None
 		return
 
-	parseAndStore(metric, interval_ns, curr_time, my_count)
+	parseAndStore(metric, interval_ns, my_count)
 	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)') if debug else None
 
 
-def parseAndStore(metric, interval, curr_time, my_count):
+def parseAndStore(metric, interval, my_count):
 	for entry in metric:
 		key = entry['key']
 		value = entry['value']
 		
-		if value['alive_timestamp'] < curr_time - interval:
-			continue
-
 		if value['server_ip'] == key['saddr']:
 			connIdentifier = (
 				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
@@ -79,6 +75,13 @@ def parseAndStore(metric, interval, curr_time, my_count):
 				socket.ntohs(key['sport']),
 				socket.ntohs(key['dport']),
 				'TCP' if key['proto'] == 6 else 'UDP')
+
+		#TODO: add thread to periodically clear the dict
+		if connIdentifier in local_dict and value['alive_timestamp'] < local_dict[connIdentifier] + interval:
+			continue
+		else:
+			local_dict[connIdentifier] = value['alive_timestamp']
+
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
 		n_bits_server = value['n_bits_server']
