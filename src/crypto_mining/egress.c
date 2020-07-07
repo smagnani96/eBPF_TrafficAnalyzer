@@ -11,7 +11,7 @@
 #define IPPROTO_UDP 17
 
 /* Number of max TCP session tracked */
-#define N_SESSION 10
+#define N_SESSION 10000
 #define SESSION_DROP_AFTER_TIME 30000000000
 
 /*Features to be exported*/
