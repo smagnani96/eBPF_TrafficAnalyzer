@@ -12,8 +12,6 @@ This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detecti
 
 The following parameters are vital:
 
-#define SESSION_PACKET_RESTART_TIME 1000000000      // Seconds to wait before restarting to track packets from an already tracked session
-
 * *N_SESSION*, the number of max TCP session tracked
 * *N_PACKET_PER_SESSION*, the number of packet from the same TCP session
 * *N_PACKET_TOTAL*, the number of max packet captured (size of PACKET_BUFFER, usually N_SESSION*N_PACKET_PER_SESSION)
@@ -43,7 +41,10 @@ Reading the required features does not lock the map for the dataplane, which can
 
 This section covers the [crypto_mining/feature\_extractor.c](./src/crypto_mining) program related to Crypto Mining detection.
 
-The only parameter vital to the program is *N_SESSION*, which represents the max number of sessions tracked.
+The vital parameters are: 
+
+* *N_SESSION*, represents the max number of sessions tracked
+* *SESSION_DROP_AFTER_TIME*, is the time after a certain session should be considered old and overwritten
 
 The current filtered protocols are:
 
@@ -275,7 +276,7 @@ The scrips are:
 * [dynmon_extractor_ddos.py](./tools/dynmon\_extractor\_ddos.py) 
 * [dynmon_extractor_crypto.py](./tools/dynmon\_extractor\_crypto.py) 
 
-The default output type uses the JSON format, but you can obtains CSV files by adding `--debug` as parameter to the scripts in order to better inspect data (as required).
+The default output type CSV format, but you can obtains JSON output by adding `--json` as parameter to the scripts in order to better inspect data (type `-h` to see all the available options).
 
 ## Test
 
