@@ -60,7 +60,7 @@ def parseAndStoreJson(entries, output_dir, counter):
 		sid = entry['id']
 		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
 		seconds = entry['timestamp'] // 1000000000
-		nanoseconds = int(str(entry['timestamp'])[:9])
+		nanoseconds = int(str(entry['timestamp'])[-9:])
 		features = [seconds, nanoseconds]
 		for key, value in entry.items():
 			if key != 'id' and key != 'timestamp': features.append(value)
@@ -109,7 +109,7 @@ def parseAndStore(entries, output_dir, counter):
 	flows = {}
 	for entry in entries:
 		seconds = entry['timestamp'] // 1000000000
-		nanoseconds = str(entry['timestamp'])[:9]
+		nanoseconds = str(entry['timestamp'])[-9:]
 		sid = entry['id']
 		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
 		
