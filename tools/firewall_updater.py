@@ -24,30 +24,45 @@ def main():
     port = args['port']
 
     cube_name = args['cube_name']
-    rule = args['rule']
-    isToRemove = args['remove']
-    chain = "egress" if args['egress'] else "ingress"
+    inject_rule = args['inject_rule']
+    remove_rule = args['remove_rule']
+    show = args['show_rules']
+    chain = "EGRESS" if args['egress'] else "INGRESS"
 
     polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
-    fw = getFirewall(cube_name)
-    print(json.dumps(fw, indent=2))
+    if show:
+        ingress = getRules(cube_name, "INGRESS")
+        egress = getRules(cube_name, "EGRESS")
+        print(f'Ingress rules:')
+        for x in ingress: print(f'\t{json.dumps(x)}')
+        print(f'Egress rules:')
+        for x in egress: print(f'\t{json.dumps(x)}')
+        return
 
-    eraseRule(cube_name, 0, chain) if isToRemove else injectRule(cube_name, json.loads(rule), chain)
-    '''
-    TODO: define how to inject new rules with red border
-    '''
+    if inject_rule:
+        tmp = {}
+        for field in inject_rule.split():
+            pair = field.split("=")
+            tmp[pair[0]] = pair[1]
+        injectRule(cube_name, tmp, chain)
 
-def eraseRule(cube_name, rule_id, chain):
+    if remove_rule:
+        removeRule(cube_name, remove_rule, chain)
+    
+    print('All done :)')
+
+
+def removeRule(cube_name, rule_id, chain):
     try:
-        response = requests.delete(f'{polycubed_endpoint}/firewall/{cube_name}/chain/${chain}/rule/{rule_id}', timeout=REQUESTS_TIMEOUT)
+        response = requests.delete(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/rule/{rule_id}', timeout=REQUESTS_TIMEOUT)
         if response.status_code == 500:
             print(response.content)
-            exit(1)
+            return
         response.raise_for_status()
-        return json.loads(response.content)
+        print(f'Rule correctly removed')
     except requests.exceptions.HTTPError:
-        return False, None
+        print(f'Unable to remove rule {rule_id}\n\tError -> {response.status_code}\n\tWhat -> {response.content}')
     except requests.exceptions.ConnectionError:
         print('Connection error: unable to connect to polycube daemon.')
         exit(1)
@@ -61,14 +76,14 @@ def eraseRule(cube_name, rule_id, chain):
 
 def injectRule(cube_name, rule, chain):
     try:
-        response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/insert', timeout=REQUESTS_TIMEOUT, data=chain)
+        response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/insert', timeout=REQUESTS_TIMEOUT, data=json.dumps(rule))
         if response.status_code == 500:
             print(response.content)
-            exit(1)
+            return
         response.raise_for_status()
-        return json.loads(response.content)
+        print(f'Rule correctly injected')
     except requests.exceptions.HTTPError:
-        return False, None
+        print(f'Unable to inject rule {rule}\n\tError -> {response.status_code}\n\tWhat -> {response.content}')
     except requests.exceptions.ConnectionError:
         print('Connection error: unable to connect to polycube daemon.')
         exit(1)
@@ -77,17 +92,20 @@ def injectRule(cube_name, rule, chain):
         exit(1)
     except requests.exceptions.RequestException:
         print('Error: unable to connect to polycube daemon.')
-        exit(1) 
+        exit(1)
+    except json.JSONDecodeError:
+        print(f'Unable to decode rule {rule}')
+        exit(1)
 
 
-def getFirewall(cube_name):
+def getRules(cube_name, chain):
     try:
-        response = requests.get(f'{polycubed_endpoint}/firewall/{cube_name}', timeout=REQUESTS_TIMEOUT)
+        response = requests.get(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/rule', timeout=REQUESTS_TIMEOUT)
         if response.status_code == 500:
             print(response.content)
             exit(1)
         response.raise_for_status()
-        return json.loads(response.content)
+        return json.loads(response.content)[:-1]
     except requests.exceptions.HTTPError:
         return False, None
     except requests.exceptions.ConnectionError:
@@ -104,9 +122,10 @@ def getFirewall(cube_name):
 def parseArguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('cube_name', help='indicates the name of the cube', type=str)
-    parser.add_argument('rule', help='the rule to be added/removed', type=str)
-    parser.add_argument('-r', '--remove', help='set that the rule is to be removed', action='store_true')
+    parser.add_argument('-i', '--inject-rule', help='the rule to be added', type=str, default=None)
+    parser.add_argument('-r', '--remove-rule', help='the rule ID to be removed', type=str, default=None)
     parser.add_argument('-e', '--egress', help='set that the rule is to be inserted in the egress chain', action='store_true')
+    parser.add_argument('-s', '--show-rules', help='show the rules already stored in firewall', action='store_true')
     parser.add_argument('-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
     parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
     parser.add_argument('-v', '--version', action='version', version=showVersion())
