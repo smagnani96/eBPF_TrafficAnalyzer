@@ -41,11 +41,7 @@ def main():
         return
 
     if inject_rule:
-        tmp = {}
-        for field in inject_rule.split():
-            pair = field.split("=")
-            tmp[pair[0]] = pair[1]
-        injectRule(cube_name, tmp, chain)
+        injectRule(cube_name, inject_rule, chain)
 
     if remove_rule:
         removeRule(cube_name, remove_rule, chain)
@@ -76,7 +72,7 @@ def removeRule(cube_name, rule_id, chain):
 
 def injectRule(cube_name, rule, chain):
     try:
-        response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/insert', timeout=REQUESTS_TIMEOUT, data=json.dumps(rule))
+        response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/insert', timeout=REQUESTS_TIMEOUT, data=rule)
         if response.status_code == 500:
             print(response.content)
             return

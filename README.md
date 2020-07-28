@@ -204,10 +204,18 @@ It automatically contacts Polycube at `localhost:9000` which, if you followed th
 ./dynmon_injector.py monitor wlp59s0  ../src/ddos_detection/feature_extractor.json
 ```
 
-### Crypto
+#### Crypto
 
 ```bash
 ./dynmon_injector.py monitor wlp59s0  ../src/crypto_mining/feature_extractor.json
+```
+
+### Loading Firewall
+
+To also create a Firewall cube, you can use the [firewall\_injector.py](./tools/firewall_injector.py) script which takes a lot of parameters, but you can just specify the `cube_name` (fw) and the `interface` to be attached to (wlp59s0).
+
+```bash
+./firewall_injector.py fw wlp59s0
 ```
 
 ### Extracting data (DDos/Crypto)
@@ -228,6 +236,51 @@ For more accepted parameters (like interval between 2 read operation), type `--h
 
 ```bash
 ./dynmon_extractor_crypto.py monitor
+```
+
+### Inject/Remove/Show Firewall rules
+
+All the accepted REST API calls are listed in the [firewall\_swagger.json](./firewall_swagger.json) file. In the [firewall\_updater.py](./tools/firewall_updater.py) script, there are mainly 3 functions to interact with the cube and they allow you to:
+
+* Inject a new rule in a specific chain
+* Remove a rule from a specific chain
+* List all the present rules
+
+A rule is a json payload sent to a specific endpoint and can contain the following attributes:
+
+```bash
+Keyword         Type       Description
+ <id>            unsigned   
+ <src>           string     Source IP Address.
+ <dst>           string     Destination IP Address.
+ <l4proto>       string     Level 4 Protocol.
+ <sport>         unsigned   Source L4 Port
+ <dport>         unsigned   Destination L4 Port
+ <tcpflags>      string     TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means 
+                            set to 0.
+ <conntrack>     string     Connection status (NEW, ESTABLISHED, RELATED, INVALID)
+ <action>        string     Action if the rule matches. Default is DROP.
+ <description>   string     Description of the rule.
+```
+
+Once created, each rule is associated to an ID which can be later used to remove the rule from the chain.
+
+#### Show
+
+```bash
+./firewall_updater.py fw -s
+```
+
+#### Inject
+
+```bash
+./firewall_updater.py fw -i '{"l4proto":"ICMP", "src":"10.0.0.2/32", "dst":"10.0.0.1", "action":"DROP"}'
+```
+
+#### Remove
+
+```bash
+./firewall_updater.py fw -r 0
 ```
 
 ## General Usage
