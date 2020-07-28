@@ -1,0 +1,4922 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "x-yang-path": "/input",
+        "version": "1.0.0",
+        "x-service-name": "firewall",
+        "description": "firewall API generated from firewall.yang",
+        "title": "firewall API"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "schemes": [
+        "http"
+    ],
+    "tags": [
+        {
+            "name": "firewall"
+        }
+    ],
+    "paths": {
+        "/firewall/{name}/": {
+            "put": {
+                "responses": {
+                    "201": {
+                        "description": "OK: Resource replaced successfully"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "204": {
+                        "description": "No content: Resource modified successfully"
+                    },
+                    "400": {
+                        "description": "Bad request: resource not replaced"
+                    }
+                },
+                "description": "Replace operation of resource: firewall",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "firewallbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Firewall"
+                        },
+                        "name": "firewall",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "x-has-default-impl": true,
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Replace firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "replaceFirewallByID"
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Resource deleted"
+                    }
+                },
+                "description": "Delete operation of resource: firewall",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "x-has-default-impl": true,
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Delete firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "deleteFirewallByID"
+            },
+            "post": {
+                "responses": {
+                    "201": {
+                        "description": "Created: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not created"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "409": {
+                        "description": "Conflict: Resource not created"
+                    }
+                },
+                "description": "Create operation of resource: firewall",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "firewallbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Firewall"
+                        },
+                        "name": "firewall",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "x-has-default-impl": true,
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallByID"
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: firewall",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "firewallbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Firewall"
+                        },
+                        "name": "firewall",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/Firewall"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: firewall",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallByID"
+            }
+        },
+        "/firewall/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: firewall",
+                "parameters": [
+                    {
+                        "required": true,
+                        "description": "firewallbody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Firewall"
+                            },
+                            "type": "array"
+                        },
+                        "name": "firewall",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallListByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Firewall"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: firewall",
+                "parameters": [],
+                "produces": [
+                    "application/json"
+                ],
+                "x-has-default-impl": true,
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read firewall by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallListByID"
+            }
+        },
+        "/firewall/{name}/uuid/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "UUID of the Cube",
+                            "format": "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: uuid",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read uuid by ID",
+                "x-is-base-datamodel": true,
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallUuidByID"
+            }
+        },
+        "/firewall/{name}/type/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "description": "Type of the Cube (TC, XDP_SKB, XDP_DRV)",
+                            "default": "TC",
+                            "enum": [
+                                "TC",
+                                "XDP_SKB",
+                                "XDP_DRV"
+                            ],
+                            "type": "string",
+                            "example": "TC"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: type",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read type by ID",
+                "x-is-base-datamodel": true,
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallTypeByID"
+            }
+        },
+        "/firewall/{name}/service-name/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "example": "helloworld"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: service-name",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read service-name by ID",
+                "x-is-base-datamodel": true,
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallServiceNameByID"
+            }
+        },
+        "/firewall/{name}/loglevel/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: loglevel",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "Defines the logging level of a service instance, from none (OFF) to the most verbose (TRACE)",
+                        "required": true,
+                        "name": "loglevel",
+                        "x-is-enum": "true",
+                        "in": "body",
+                        "schema": {
+                            "default": "INFO",
+                            "enum": [
+                                "TRACE",
+                                "DEBUG",
+                                "INFO",
+                                "WARN",
+                                "ERR",
+                                "CRITICAL",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "Defines the logging level of a service instance, from none (OFF) to the most verbose (TRACE)",
+                            "example": "INFO"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update loglevel by ID",
+                "x-is-base-datamodel": true,
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallLoglevelByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "default": "INFO",
+                            "enum": [
+                                "TRACE",
+                                "DEBUG",
+                                "INFO",
+                                "WARN",
+                                "ERR",
+                                "CRITICAL",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "Defines the logging level of a service instance, from none (OFF) to the most verbose (TRACE)",
+                            "example": "INFO"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: loglevel",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read loglevel by ID",
+                "x-is-base-datamodel": true,
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallLoglevelByID"
+            }
+        },
+        "/firewall/{name}/conntrack/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: conntrack",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "Enables the Connection Tracking module. Mandatory if connection tracking rules are needed. Default is ON.",
+                        "required": true,
+                        "name": "conntrack",
+                        "x-is-enum": "true",
+                        "in": "body",
+                        "schema": {
+                            "enum": [
+                                "ON",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "Enables the Connection Tracking module. Mandatory if connection tracking rules are needed. Default is ON."
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update conntrack by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallConntrackByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "enum": [
+                                "ON",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "Enables the Connection Tracking module. Mandatory if connection tracking rules are needed. Default is ON."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: conntrack",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read conntrack by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallConntrackByID"
+            }
+        },
+        "/firewall/{name}/accept-established/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: accept-established",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "If Connection Tracking is enabled, all packets belonging to ESTABLISHED connections will be forwarded automatically. Default is ON.",
+                        "required": true,
+                        "name": "accept-established",
+                        "x-is-enum": "true",
+                        "in": "body",
+                        "schema": {
+                            "enum": [
+                                "ON",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "If Connection Tracking is enabled, all packets belonging to ESTABLISHED connections will be forwarded automatically. Default is ON."
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update accept-established by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallAcceptEstablishedByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "enum": [
+                                "ON",
+                                "OFF"
+                            ],
+                            "type": "string",
+                            "description": "If Connection Tracking is enabled, all packets belonging to ESTABLISHED connections will be forwarded automatically. Default is ON."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: accept-established",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read accept-established by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallAcceptEstablishedByID"
+            }
+        },
+        "/firewall/{name}/interactive/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: interactive",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE.",
+                        "schema": {
+                            "default": "true",
+                            "type": "boolean",
+                            "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
+                        },
+                        "name": "interactive",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update interactive by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallInteractiveByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "default": "true",
+                            "type": "boolean",
+                            "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: interactive",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read interactive by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallInteractiveByID"
+            }
+        },
+        "/firewall/{name}/session-table/{src}/{dst}/{l4proto}/{sport}/{dport}/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/SessionTable"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: session-table",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "ID of src",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "src"
+                    },
+                    {
+                        "description": "ID of dst",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "dst"
+                    },
+                    {
+                        "description": "ID of l4proto",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "l4proto"
+                    },
+                    {
+                        "description": "ID of sport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "sport"
+                    },
+                    {
+                        "description": "ID of dport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "dport"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read session-table by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallSessionTableByID"
+            }
+        },
+        "/firewall/{name}/session-table/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/SessionTable"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: session-table",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read session-table by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallSessionTableListByID"
+            }
+        },
+        "/firewall/{name}/session-table/{src}/{dst}/{l4proto}/{sport}/{dport}/state/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Connection state."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: state",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "ID of src",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "src"
+                    },
+                    {
+                        "description": "ID of dst",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "dst"
+                    },
+                    {
+                        "description": "ID of l4proto",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "l4proto"
+                    },
+                    {
+                        "description": "ID of sport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "sport"
+                    },
+                    {
+                        "description": "ID of dport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "dport"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read state by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallSessionTableStateByID"
+            }
+        },
+        "/firewall/{name}/session-table/{src}/{dst}/{l4proto}/{sport}/{dport}/eta/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Last packet matching the connection",
+                            "format": "uint32"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: eta",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "description": "ID of src",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "src"
+                    },
+                    {
+                        "description": "ID of dst",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "dst"
+                    },
+                    {
+                        "description": "ID of l4proto",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "l4proto"
+                    },
+                    {
+                        "description": "ID of sport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "sport"
+                    },
+                    {
+                        "description": "ID of dport",
+                        "format": "uint16",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "dport"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read eta by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallSessionTableEtaByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/": {
+            "put": {
+                "responses": {
+                    "201": {
+                        "description": "OK: Resource replaced successfully"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "204": {
+                        "description": "No content: Resource modified successfully"
+                    },
+                    "400": {
+                        "description": "Bad request: resource not replaced"
+                    }
+                },
+                "description": "Replace operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Chain"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Replace chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "replaceFirewallChainByID"
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Resource deleted"
+                    }
+                },
+                "description": "Delete operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Delete chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "deleteFirewallChainByID"
+            },
+            "post": {
+                "responses": {
+                    "201": {
+                        "description": "Created: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not created"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "409": {
+                        "description": "Conflict: Resource not created"
+                    }
+                },
+                "description": "Create operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Chain"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainByID"
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "$ref": "#/definitions/Chain"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallChainByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/Chain"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainByID"
+            }
+        },
+        "/firewall/{name}/chain/": {
+            "put": {
+                "responses": {
+                    "201": {
+                        "description": "OK: Resource replaced successfully"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "204": {
+                        "description": "No content: Resource modified successfully"
+                    },
+                    "400": {
+                        "description": "Bad request: resource not replaced"
+                    }
+                },
+                "description": "Replace operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Chain"
+                            },
+                            "type": "array"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Replace chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "replaceFirewallChainListByID"
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Resource deleted"
+                    }
+                },
+                "description": "Delete operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Delete chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "deleteFirewallChainListByID"
+            },
+            "post": {
+                "responses": {
+                    "201": {
+                        "description": "Created: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not created"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "409": {
+                        "description": "Conflict: Resource not created"
+                    }
+                },
+                "description": "Create operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Chain"
+                            },
+                            "type": "array"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainListByID"
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "required": true,
+                        "description": "chainbody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Chain"
+                            },
+                            "type": "array"
+                        },
+                        "name": "chain",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallChainListByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/Chain"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: chain",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read chain by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainListByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/default/": {
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: default",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "Default action if no rule matches in the ingress chain. Default is DROP.",
+                        "required": true,
+                        "name": "default",
+                        "x-is-enum": "true",
+                        "in": "body",
+                        "x-typedef": "action",
+                        "schema": {
+                            "x-typedef": "action",
+                            "type": "string",
+                            "description": "Default action if no rule matches in the ingress chain. Default is DROP.",
+                            "enum": [
+                                "DROP",
+                                "LOG",
+                                "FORWARD"
+                            ],
+                            "example": "DROP, FORWARD, LOG"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update default by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallChainDefaultByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "x-typedef": "action",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "x-typedef": "action",
+                            "type": "string",
+                            "description": "Default action if no rule matches in the ingress chain. Default is DROP.",
+                            "enum": [
+                                "DROP",
+                                "LOG",
+                                "FORWARD"
+                            ],
+                            "example": "DROP, FORWARD, LOG"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: default",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read default by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainDefaultByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainStats"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: stats",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read stats by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/ChainStats"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: stats",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read stats by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsListByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/pkts/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Number of packets matching the rule",
+                            "format": "uint64"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: pkts",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read pkts by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsPktsByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/bytes/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Number of bytes matching the rule",
+                            "format": "uint64"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: bytes",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read bytes by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsBytesByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/src/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Source IP Address.",
+                            "example": "10.0.0.1/24"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: src",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read src by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsSrcByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/dst/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Destination IP Address.",
+                            "example": "10.0.0.2/24"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: dst",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read dst by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsDstByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/l4proto/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Level 4 Protocol."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: l4proto",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read l4proto by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsL4protoByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/sport/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Source L4 Port",
+                            "format": "uint16"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: sport",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read sport by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsSportByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/dport/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Destination L4 Port",
+                            "format": "uint16"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: dport",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read dport by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsDportByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/tcpflags/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                            "example": "!FIN,SYN,!RST,!ACK"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: tcpflags",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read tcpflags by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsTcpflagsByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/conntrack/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "x-typedef": "conntrackstatus",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "x-typedef": "conntrackstatus",
+                            "type": "string",
+                            "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                            "enum": [
+                                "NEW",
+                                "ESTABLISHED",
+                                "RELATED",
+                                "INVALID"
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: conntrack",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read conntrack by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsConntrackByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/action/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "x-typedef": "action",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "x-typedef": "action",
+                            "description": "Action if the rule matches. Default is DROP.",
+                            "enum": [
+                                "DROP",
+                                "LOG",
+                                "FORWARD"
+                            ],
+                            "type": "string",
+                            "example": "DROP, FORWARD, LOG"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: action",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read action by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsActionByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/stats/{id}/description/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Description of the rule.",
+                            "example": "This rule blocks incoming SSH connections."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: description",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read description by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainStatsDescriptionByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/": {
+            "put": {
+                "responses": {
+                    "201": {
+                        "description": "OK: Resource replaced successfully"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "204": {
+                        "description": "No content: Resource modified successfully"
+                    },
+                    "400": {
+                        "description": "Bad request: resource not replaced"
+                    }
+                },
+                "description": "Replace operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainRule"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Replace rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "replaceFirewallChainRuleByID"
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Resource deleted"
+                    }
+                },
+                "description": "Delete operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Delete rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "deleteFirewallChainRuleByID"
+            },
+            "post": {
+                "responses": {
+                    "201": {
+                        "description": "Created: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not created"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "409": {
+                        "description": "Conflict: Resource not created"
+                    }
+                },
+                "description": "Create operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainRule"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainRuleByID"
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainRule"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallChainRuleByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainRule"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/": {
+            "put": {
+                "responses": {
+                    "201": {
+                        "description": "OK: Resource replaced successfully"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "204": {
+                        "description": "No content: Resource modified successfully"
+                    },
+                    "400": {
+                        "description": "Bad request: resource not replaced"
+                    }
+                },
+                "description": "Replace operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/ChainRule"
+                            },
+                            "type": "array"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Replace rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "replaceFirewallChainRuleListByID"
+            },
+            "delete": {
+                "responses": {
+                    "404": {
+                        "description": "Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Resource deleted"
+                    }
+                },
+                "description": "Delete operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Delete rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "deleteFirewallChainRuleListByID"
+            },
+            "post": {
+                "responses": {
+                    "201": {
+                        "description": "Created: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not created"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "409": {
+                        "description": "Conflict: Resource not created"
+                    }
+                },
+                "description": "Create operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/ChainRule"
+                            },
+                            "type": "array"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainRuleListByID"
+            },
+            "patch": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful update"
+                    },
+                    "404": {
+                        "description": "Not found: Resource not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful update"
+                    }
+                },
+                "description": "Update operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "rulebody object",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/ChainRule"
+                            },
+                            "type": "array"
+                        },
+                        "name": "rule",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Update rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "updateFirewallChainRuleListByID"
+            },
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/ChainRule"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: rule",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleListByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/src/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Source IP Address.",
+                            "example": "10.0.0.1/24"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: src",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read src by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleSrcByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/dst/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Destination IP Address.",
+                            "example": "10.0.0.2/24"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: dst",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read dst by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleDstByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/l4proto/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Level 4 Protocol."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: l4proto",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read l4proto by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleL4protoByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/sport/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Source L4 Port",
+                            "format": "uint16"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: sport",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read sport by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleSportByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/dport/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "integer",
+                            "description": "Destination L4 Port",
+                            "format": "uint16"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: dport",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read dport by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleDportByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/tcpflags/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                            "example": "!FIN,SYN,!RST,!ACK"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: tcpflags",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read tcpflags by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleTcpflagsByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/conntrack/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "x-typedef": "conntrackstatus",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "x-typedef": "conntrackstatus",
+                            "type": "string",
+                            "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                            "enum": [
+                                "NEW",
+                                "ESTABLISHED",
+                                "RELATED",
+                                "INVALID"
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: conntrack",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read conntrack by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleConntrackByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/action/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "x-is-enum": "true",
+                        "x-typedef": "action",
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "x-typedef": "action",
+                            "description": "Action if the rule matches. Default is DROP.",
+                            "enum": [
+                                "DROP",
+                                "LOG",
+                                "FORWARD"
+                            ],
+                            "type": "string",
+                            "example": "DROP, FORWARD, LOG"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: action",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read action by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleActionByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/rule/{id}/description/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "readOnly": true,
+                            "type": "string",
+                            "description": "Description of the rule.",
+                            "example": "This rule blocks incoming SSH connections."
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed: Use POST to invoke operations"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                },
+                "description": "Read operation of resource: description",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "description": "ID of id",
+                        "format": "uint32",
+                        "required": true,
+                        "in": "path",
+                        "type": "integer",
+                        "name": "id"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Read description by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "readFirewallChainRuleDescriptionByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/append/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainAppendOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: append",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "appendbody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainAppendInput"
+                        },
+                        "name": "append",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create append by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainAppendByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/insert/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainInsertOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: insert",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "insertbody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainInsertInput"
+                        },
+                        "name": "insert",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create insert by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainInsertByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/delete/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: delete",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "deletebody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainDeleteInput"
+                        },
+                        "name": "delete",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create delete by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainDeleteByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/reset-counters/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainResetCountersOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: reset-counters",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create reset-counters by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainResetCountersByID"
+            }
+        },
+        "/firewall/{name}/chain/{chain_name}/apply-rules/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/ChainApplyRulesOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: apply-rules",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create apply-rules by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainApplyRulesByID"
+            }
+        }
+    },
+    "definitions": {
+        "RuleFields": {
+            "properties": {
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-is-yang-grouping": true
+        },
+        "SessionTable": {
+            "x-is-list": "true",
+            "properties": {
+                "src": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "string",
+                    "description": "Source IP"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "string",
+                    "description": "Destination IP"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "integer",
+                    "description": "Source Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "integer",
+                    "description": "Destination",
+                    "format": "uint16"
+                },
+                "state": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Connection state."
+                },
+                "eta": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Last packet matching the connection",
+                    "format": "uint32"
+                }
+            },
+            "x-parent": "Firewall"
+        },
+        "ChainStats": {
+            "x-is-list": "true",
+            "properties": {
+                "id": {
+                    "readOnly": true,
+                    "x-is-key": true,
+                    "type": "integer",
+                    "description": "Rule Identifier",
+                    "format": "uint32"
+                },
+                "pkts": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Number of packets matching the rule",
+                    "format": "uint64"
+                },
+                "bytes": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Number of bytes matching the rule",
+                    "format": "uint64"
+                },
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainRule": {
+            "x-is-list": "true",
+            "properties": {
+                "id": {
+                    "x-is-key": true,
+                    "type": "integer",
+                    "description": "Rule Identifier",
+                    "format": "uint32"
+                },
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "Chain": {
+            "x-is-list": "true",
+            "x-has-yang-actions": true,
+            "properties": {
+                "name": {
+                    "x-is-key": true,
+                    "type": "string",
+                    "description": "Chain in which the rule will be inserted. Default: INGRESS.",
+                    "enum": [
+                        "INGRESS",
+                        "EGRESS",
+                        "INVALID"
+                    ],
+                    "example": "INGRESS, EGRESS."
+                },
+                "default": {
+                    "x-typedef": "action",
+                    "type": "string",
+                    "description": "Default action if no rule matches in the ingress chain. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "stats": {
+                    "items": {
+                        "$ref": "#/definitions/ChainStats"
+                    },
+                    "readOnly": true,
+                    "type": "array",
+                    "x-key-list": [
+                        {
+                            "name": "id",
+                            "type": "integer",
+                            "format": "uint32"
+                        }
+                    ],
+                    "x-key": [
+                        "id"
+                    ]
+                },
+                "rule": {
+                    "items": {
+                        "$ref": "#/definitions/ChainRule"
+                    },
+                    "type": "array",
+                    "x-key-list": [
+                        {
+                            "name": "id",
+                            "type": "integer",
+                            "format": "uint32"
+                        }
+                    ],
+                    "x-key": [
+                        "id"
+                    ]
+                }
+            },
+            "x-yang-actions": [
+                {
+                    "x-yang-action-name-lower-camelcase": "append",
+                    "x-yang-action-name-upper-camelcase": "Append",
+                    "x-yang-action-input-object": "ChainAppendInput",
+                    "x-yang-action-has-output": true,
+                    "x-yang-action-output-object": "ChainAppendOutput",
+                    "x-yang-action-has-input": true,
+                    "x-yang-action-baseName": "append"
+                },
+                {
+                    "x-yang-action-name-lower-camelcase": "insert",
+                    "x-yang-action-name-upper-camelcase": "Insert",
+                    "x-yang-action-input-object": "ChainInsertInput",
+                    "x-yang-action-has-output": true,
+                    "x-yang-action-output-object": "ChainInsertOutput",
+                    "x-yang-action-has-input": true,
+                    "x-yang-action-baseName": "insert"
+                },
+                {
+                    "x-yang-action-name-lower-camelcase": "delete",
+                    "x-yang-action-name-upper-camelcase": "Delete",
+                    "x-yang-action-input-object": "ChainDeleteInput",
+                    "x-yang-action-has-output": false,
+                    "x-yang-action-has-input": true,
+                    "x-yang-action-baseName": "delete"
+                },
+                {
+                    "x-yang-action-name-lower-camelcase": "resetCounters",
+                    "x-yang-action-name-upper-camelcase": "ResetCounters",
+                    "x-yang-action-output-object": "ChainResetCountersOutput",
+                    "x-yang-action-has-output": true,
+                    "x-yang-action-has-input": false,
+                    "x-yang-action-baseName": "reset-counters"
+                },
+                {
+                    "x-yang-action-name-lower-camelcase": "applyRules",
+                    "x-yang-action-name-upper-camelcase": "ApplyRules",
+                    "x-yang-action-output-object": "ChainApplyRulesOutput",
+                    "x-yang-action-has-output": true,
+                    "x-yang-action-has-input": false,
+                    "x-yang-action-baseName": "apply-rules"
+                }
+            ],
+            "x-parent": "Firewall"
+        },
+        "Firewall": {
+            "x-is-list": "true",
+            "x-is-transparent": true,
+            "properties": {
+                "name": {
+                    "x-is-cube-name": true,
+                    "x-is-key": true,
+                    "description": "Name of the firewall service",
+                    "x-has-default-impl": true,
+                    "x-is-required": true,
+                    "type": "string",
+                    "example": "firewall1"
+                },
+                "uuid": {
+                    "x-is-base-datamodel": true,
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "UUID of the Cube",
+                    "format": "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+                },
+                "type": {
+                    "description": "Type of the Cube (TC, XDP_SKB, XDP_DRV)",
+                    "default": "TC",
+                    "enum": [
+                        "TC",
+                        "XDP_SKB",
+                        "XDP_DRV"
+                    ],
+                    "readOnly": true,
+                    "x-is-base-datamodel": true,
+                    "type": "string",
+                    "example": "TC"
+                },
+                "service-name": {
+                    "readOnly": true,
+                    "type": "string",
+                    "example": "helloworld",
+                    "x-is-base-datamodel": true
+                },
+                "loglevel": {
+                    "description": "Defines the logging level of a service instance, from none (OFF) to the most verbose (TRACE)",
+                    "default": "INFO",
+                    "enum": [
+                        "TRACE",
+                        "DEBUG",
+                        "INFO",
+                        "WARN",
+                        "ERR",
+                        "CRITICAL",
+                        "OFF"
+                    ],
+                    "x-is-base-datamodel": true,
+                    "type": "string",
+                    "example": "INFO"
+                },
+                "conntrack": {
+                    "enum": [
+                        "ON",
+                        "OFF"
+                    ],
+                    "type": "string",
+                    "description": "Enables the Connection Tracking module. Mandatory if connection tracking rules are needed. Default is ON."
+                },
+                "accept-established": {
+                    "enum": [
+                        "ON",
+                        "OFF"
+                    ],
+                    "type": "string",
+                    "description": "If Connection Tracking is enabled, all packets belonging to ESTABLISHED connections will be forwarded automatically. Default is ON."
+                },
+                "interactive": {
+                    "default": "true",
+                    "type": "boolean",
+                    "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
+                },
+                "session-table": {
+                    "items": {
+                        "$ref": "#/definitions/SessionTable"
+                    },
+                    "readOnly": true,
+                    "type": "array",
+                    "x-key-list": [
+                        {
+                            "name": "src",
+                            "type": "string"
+                        },
+                        {
+                            "name": "dst",
+                            "type": "string"
+                        },
+                        {
+                            "name": "l4proto",
+                            "type": "string"
+                        },
+                        {
+                            "name": "sport",
+                            "type": "integer",
+                            "format": "uint16"
+                        },
+                        {
+                            "name": "dport",
+                            "type": "integer",
+                            "format": "uint16"
+                        }
+                    ],
+                    "x-key": [
+                        "src",
+                        "dst",
+                        "l4proto",
+                        "sport",
+                        "dport"
+                    ]
+                },
+                "chain": {
+                    "items": {
+                        "$ref": "#/definitions/Chain"
+                    },
+                    "type": "array",
+                    "x-key-list": [
+                        {
+                            "name": "name",
+                            "type": "string",
+                            "isEnum": "true"
+                        }
+                    ],
+                    "x-key": [
+                        "name"
+                    ]
+                }
+            },
+            "x-parent": "Firewall"
+        },
+        "ChainAppendInput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainAppendOutput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "format": "uint32"
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainInsertInput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "format": "uint32"
+                },
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainInsertOutput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "format": "uint32"
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainDeleteInput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainResetCountersOutput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "result": {
+                    "type": "boolean",
+                    "description": "True if the operation is successful"
+                }
+            },
+            "x-parent": "Chain"
+        },
+        "ChainApplyRulesOutput": {
+            "x-is-yang-action-object": true,
+            "properties": {
+                "result": {
+                    "type": "boolean",
+                    "description": "True if the operation is successful"
+                }
+            },
+            "x-parent": "Chain"
+        }
+    }
+}
