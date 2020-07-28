@@ -32,6 +32,6 @@ timeout 30 ../tools/dynmon_extractor_ddos.py monitor >/dev/null &
 sudo ip netns exec ns2 iperf3 -s &>/dev/null &
 sleep 1
 
-sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 30
+sudo ip netns exec ns1 iperf3 -c 10.0.0.2 -i 1 -t 60
 
 rm -rf dump_ddos
