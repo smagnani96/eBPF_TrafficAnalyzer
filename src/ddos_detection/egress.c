@@ -202,7 +202,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
   uint8_t ip_header_len = ip->ihl << 2;
   
   /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
-  uint64_t curr_time = pcn_get_packet_tstamp(ctx);
+  uint64_t curr_time = pcn_get_time_epoch();
 
   switch (ip->protocol) {
     case IPPROTO_TCP: {

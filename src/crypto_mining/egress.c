@@ -222,7 +222,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       struct session_key key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
       /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
-      uint64_t curr_time = pcn_get_packet_tstamp(ctx);
+      uint64_t curr_time = pcn_get_time_epoch();
       uint16_t pkt_len = bpf_ntohs(ip->tot_len);
 
       /*Check if new session*/
