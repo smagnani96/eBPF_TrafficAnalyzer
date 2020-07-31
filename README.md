@@ -107,7 +107,7 @@ You can also tell Dynmon to erase the map after the read. Dynmon automatically u
 
 * OS: Ubuntu >= 18.04 (20.04 works fine)
 * Kernel: 5.7.0 (also 5.4.0-33-generic is good, but map extraction can be slower due to some features missing)
-* Disk space: >= 2.5 GB + needed space for output files
+* Disk space: >= 210 MB (Polycube Docker) + needed space for output files
 * Memory: >= 100MB + X (where X is the size of the used BPF_MAP depending on parameters like: N°Sessions, N°Packets_per_session,...)
 
 ### OS installation
