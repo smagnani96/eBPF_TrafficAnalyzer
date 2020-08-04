@@ -42,26 +42,6 @@ def main():
     else:
         createInstance(cube_name)
         attach_to_interface(cube_name, interface_name)
-    patchDefaultChain(cube_name)
-
-def patchDefaultChain(cube_name):
-    try:
-        print("Patching default chain")
-        response = requests.patch(f'{polycubed_endpoint}/firewall/{cube_name}/chain/INGRESS/default', timeout=REQUESTS_TIMEOUT, data='"FORWARD"')
-        response.raise_for_status()
-        response = requests.patch(f'{polycubed_endpoint}/firewall/{cube_name}/chain/EGRESS/default', timeout=REQUESTS_TIMEOUT, data='"FORWARD"')
-        response.raise_for_status()
-    except requests.exceptions.HTTPError:
-        return False, None
-    except requests.exceptions.ConnectionError:
-        print('Connection error: unable to connect to polycube daemon.')
-        exit(1)
-    except requests.exceptions.Timeout:
-        print('Timeout error: unable to connect to polycube daemon.')
-        exit(1)
-    except requests.exceptions.RequestException:
-        print('Error: unable to connect to polycube daemon.')
-        exit(1)
 
 
 def checkIfServiceExists(cube_name):
