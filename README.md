@@ -238,13 +238,22 @@ For more accepted parameters (like interval between 2 read operation), type `--h
 ./dynmon_extractor_crypto.py monitor
 ```
 
-### Inject/Remove/Show Firewall rules
+### Manage Firewall rules
 
-All the accepted REST API calls are listed in the [firewall\_swagger.json](./firewall_swagger.json) file. In the [firewall\_updater.py](./tools/firewall_updater.py) script, there are mainly 3 functions to interact with the cube and they allow you to:
+All the accepted REST API calls are listed in the [firewall\_swagger.json](./firewall_swagger.json) file, but the most important endpoint we are going to use is `<host>:<ip>/polycube/v1/firewall/<fwname>/chain/<CHAIN_NAME>/batch`. As the name suggests, we can use this endpoint to send a batch of requests instead of making an HTTP POST request for every rule we want to insert/remove/update/append. This endpoint accepts a list of rules as follows:
 
-* Inject a new rule in a specific chain
-* Remove a rule from a specific chain
-* List all the present rules
+```bash
+{
+	"rules": [
+		{"operation": "insert", "id": 0, "l4proto":"TCP", "src":"10.0.0.100/32", "dst":"10.0.0.150/24", "action":"drop"},
+		{"operation": "append", "l4proto": "ICMP", "src":"10.0.0.50/32", "dst":"10.0.0.75/24", "action":"drop"},
+		{"operation": "append", "l4proto": "ICMP", "src":"10.0.0.11/32", "dst":"10.0.0.12/24", "action":"drop"},
+		{"operation": "update", "id": 0, "l4proto":"TCP", "src":"10.0.0.100/32", "dst":"10.0.0.75/24", "action":"forward"},
+		{"operation": "delete", "id": 0},
+		{"operation": "delete", "l4proto":"ICMP", "src":"10.0.0.50/32", "dst":"10.0.0.75/24", "action":"drop"}
+	]
+}
+```
 
 A rule is a json payload sent to a specific endpoint and can contain the following attributes:
 
@@ -265,22 +274,37 @@ Keyword         Type       Description
 
 Once created, each rule is associated to an ID which can be later used to remove the rule from the chain.
 
+It is important to remember that:
+
+* **insert** and **update** must contain an ID + the rest of the rule we want to insert/modify, otherwise the operation fails
+* **delete** behaves differently if the field ID is set; if set, the rule with that ID is removed, otherwise if the ID is not set but the rest of the rule is the Firewall will remove the rule that exactly matches the specified one, if any.
+
+In the [firewall\_updater.py](./tools/firewall_updater.py) script, there are mainly 2 functions to interact with the cube and they allow you to:
+
+* Inject a batch of rules in a specific chain
+* List all the present rules
+
 #### Show
 
+To show the current rules in the Firewall named *fw*:
+
 ```bash
-./firewall_updater.py fw -s
+$ ./firewall_updater.py fw -s                     
+Ingress rules:
+        {"id": 10, "action": "forward", "description": "Default Policy"}
+Egress rules:
+        {"id": 0, "action": "forward", "description": "Default Policy"}
+
 ```
 
-#### Inject
+### Inject batch of rules
+
+To inject a batch of rules defined in a file named *XYZ.json* (You can take the rule batch shown above as example):
 
 ```bash
-./firewall_updater.py fw -i '{"l4proto":"ICMP", "src":"10.0.0.2/32", "dst":"10.0.0.1", "action":"DROP"}'
-```
-
-#### Remove
-
-```bash
-./firewall_updater.py fw -r 0
+$ ./firewall_updater.py fw -r XYZ.json
+Rule correctly injected
+All done :)
 ```
 
 ## General Usage

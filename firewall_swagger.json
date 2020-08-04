@@ -1,13 +1,13 @@
 {
     "swagger": "2.0",
     "info": {
-        "x-yang-path": "/input",
+        "x-yang-path": "/input/firewall.yang",
         "version": "1.0.0",
         "x-service-name": "firewall",
         "description": "firewall API generated from firewall.yang",
         "title": "firewall API"
     },
-    "host": "localhost:8080",
+    "host": "localhost:9000",
     "basePath": "/",
     "schemes": [
         "http"
@@ -773,98 +773,6 @@
                     "application/json"
                 ],
                 "operationId": "readFirewallAcceptEstablishedByID"
-            }
-        },
-        "/firewall/{name}/interactive/": {
-            "patch": {
-                "responses": {
-                    "200": {
-                        "description": "OK: Successful update"
-                    },
-                    "404": {
-                        "description": "Not found: Resource not found"
-                    },
-                    "403": {
-                        "description": "Forbidden: User not authorized"
-                    },
-                    "204": {
-                        "description": "No content: Successful update"
-                    }
-                },
-                "description": "Update operation of resource: interactive",
-                "parameters": [
-                    {
-                        "description": "ID of name",
-                        "required": true,
-                        "in": "path",
-                        "type": "string",
-                        "name": "name"
-                    },
-                    {
-                        "required": true,
-                        "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE.",
-                        "schema": {
-                            "default": "true",
-                            "type": "boolean",
-                            "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
-                        },
-                        "name": "interactive",
-                        "in": "body"
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "firewall"
-                ],
-                "summary": "Update interactive by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "operationId": "updateFirewallInteractiveByID"
-            },
-            "get": {
-                "responses": {
-                    "200": {
-                        "description": "OK: Successful operation",
-                        "schema": {
-                            "default": "true",
-                            "type": "boolean",
-                            "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
-                        }
-                    },
-                    "405": {
-                        "description": "Method not allowed: Use POST to invoke operations"
-                    },
-                    "404": {
-                        "description": "Not found"
-                    },
-                    "400": {
-                        "description": "Bad request"
-                    }
-                },
-                "description": "Read operation of resource: interactive",
-                "parameters": [
-                    {
-                        "description": "ID of name",
-                        "required": true,
-                        "in": "path",
-                        "type": "string",
-                        "name": "name"
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "firewall"
-                ],
-                "summary": "Read interactive by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "operationId": "readFirewallInteractiveByID"
             }
         },
         "/firewall/{name}/session-table/{src}/{dst}/{l4proto}/{sport}/{dport}/": {
@@ -4024,6 +3932,67 @@
                 "operationId": "createFirewallChainDeleteByID"
             }
         },
+        "/firewall/{name}/chain/{chain_name}/batch/": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK: Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found: Operation not found"
+                    },
+                    "403": {
+                        "description": "Forbidden: User not authorized"
+                    },
+                    "204": {
+                        "description": "No content: Successful operation"
+                    }
+                },
+                "x-is-yang-action": true,
+                "description": "Create operation of resource: batch",
+                "parameters": [
+                    {
+                        "description": "ID of name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "name"
+                    },
+                    {
+                        "enum": [
+                            "INGRESS",
+                            "EGRESS",
+                            "INVALID"
+                        ],
+                        "description": "ID of chain_name",
+                        "required": true,
+                        "in": "path",
+                        "type": "string",
+                        "name": "chain_name"
+                    },
+                    {
+                        "required": true,
+                        "description": "batchbody object",
+                        "schema": {
+                            "$ref": "#/definitions/ChainBatchInput"
+                        },
+                        "name": "batch",
+                        "in": "body"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "firewall"
+                ],
+                "summary": "Create batch by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "operationId": "createFirewallChainBatchByID"
+            }
+        },
         "/firewall/{name}/chain/{chain_name}/reset-counters/": {
             "post": {
                 "responses": {
@@ -4077,61 +4046,6 @@
                     "application/json"
                 ],
                 "operationId": "createFirewallChainResetCountersByID"
-            }
-        },
-        "/firewall/{name}/chain/{chain_name}/apply-rules/": {
-            "post": {
-                "responses": {
-                    "200": {
-                        "description": "OK: Successful operation",
-                        "schema": {
-                            "$ref": "#/definitions/ChainApplyRulesOutput"
-                        }
-                    },
-                    "404": {
-                        "description": "Not found: Operation not found"
-                    },
-                    "403": {
-                        "description": "Forbidden: User not authorized"
-                    },
-                    "204": {
-                        "description": "No content: Successful operation"
-                    }
-                },
-                "x-is-yang-action": true,
-                "description": "Create operation of resource: apply-rules",
-                "parameters": [
-                    {
-                        "description": "ID of name",
-                        "required": true,
-                        "in": "path",
-                        "type": "string",
-                        "name": "name"
-                    },
-                    {
-                        "enum": [
-                            "INGRESS",
-                            "EGRESS",
-                            "INVALID"
-                        ],
-                        "description": "ID of chain_name",
-                        "required": true,
-                        "in": "path",
-                        "type": "string",
-                        "name": "chain_name"
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "firewall"
-                ],
-                "summary": "Create apply-rules by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "operationId": "createFirewallChainApplyRulesByID"
             }
         }
     },
@@ -4510,20 +4424,20 @@
                     "x-yang-action-baseName": "delete"
                 },
                 {
+                    "x-yang-action-name-lower-camelcase": "batch",
+                    "x-yang-action-name-upper-camelcase": "Batch",
+                    "x-yang-action-input-object": "ChainBatchInput",
+                    "x-yang-action-has-output": false,
+                    "x-yang-action-has-input": true,
+                    "x-yang-action-baseName": "batch"
+                },
+                {
                     "x-yang-action-name-lower-camelcase": "resetCounters",
                     "x-yang-action-name-upper-camelcase": "ResetCounters",
                     "x-yang-action-output-object": "ChainResetCountersOutput",
                     "x-yang-action-has-output": true,
                     "x-yang-action-has-input": false,
                     "x-yang-action-baseName": "reset-counters"
-                },
-                {
-                    "x-yang-action-name-lower-camelcase": "applyRules",
-                    "x-yang-action-name-upper-camelcase": "ApplyRules",
-                    "x-yang-action-output-object": "ChainApplyRulesOutput",
-                    "x-yang-action-has-output": true,
-                    "x-yang-action-has-input": false,
-                    "x-yang-action-baseName": "apply-rules"
                 }
             ],
             "x-parent": "Firewall"
@@ -4598,11 +4512,6 @@
                     ],
                     "type": "string",
                     "description": "If Connection Tracking is enabled, all packets belonging to ESTABLISHED connections will be forwarded automatically. Default is ON."
-                },
-                "interactive": {
-                    "default": "true",
-                    "type": "boolean",
-                    "description": "Interactive mode applies new rules immediately; if 'false', the command 'apply-rules' has to be used to apply all the rules at once. Default is TRUE."
                 },
                 "session-table": {
                     "items": {
@@ -4898,17 +4807,115 @@
             },
             "x-parent": "Chain"
         },
-        "ChainResetCountersOutput": {
+        "ChainBatchInputRules": {
+            "x-is-list": "true",
+            "properties": {
+                "id": {
+                    "x-is-key": true,
+                    "type": "integer",
+                    "format": "uint32"
+                },
+                "operation": {
+                    "x-typedef": "operation",
+                    "type": "string",
+                    "enum": [
+                        "INSERT",
+                        "APPEND",
+                        "DELETE",
+                        "UPDATE"
+                    ]
+                },
+                "src": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Source IP Address.",
+                    "example": "10.0.0.1/24"
+                },
+                "dst": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Destination IP Address.",
+                    "example": "10.0.0.2/24"
+                },
+                "l4proto": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Level 4 Protocol."
+                },
+                "sport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Source L4 Port",
+                    "format": "uint16"
+                },
+                "dport": {
+                    "readOnly": true,
+                    "type": "integer",
+                    "description": "Destination L4 Port",
+                    "format": "uint16"
+                },
+                "tcpflags": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "TCP flags. Allowed values: SYN, FIN, ACK, RST, PSH, URG, CWR, ECE. ! means set to 0.",
+                    "example": "!FIN,SYN,!RST,!ACK"
+                },
+                "conntrack": {
+                    "readOnly": true,
+                    "x-typedef": "conntrackstatus",
+                    "type": "string",
+                    "description": "Connection status (NEW, ESTABLISHED, RELATED, INVALID)",
+                    "enum": [
+                        "NEW",
+                        "ESTABLISHED",
+                        "RELATED",
+                        "INVALID"
+                    ]
+                },
+                "action": {
+                    "description": "Action if the rule matches. Default is DROP.",
+                    "enum": [
+                        "DROP",
+                        "LOG",
+                        "FORWARD"
+                    ],
+                    "readOnly": true,
+                    "x-typedef": "action",
+                    "type": "string",
+                    "example": "DROP, FORWARD, LOG"
+                },
+                "description": {
+                    "readOnly": true,
+                    "type": "string",
+                    "description": "Description of the rule.",
+                    "example": "This rule blocks incoming SSH connections."
+                }
+            },
+            "x-parent": "ChainBatchInput"
+        },
+        "ChainBatchInput": {
             "x-is-yang-action-object": true,
             "properties": {
-                "result": {
-                    "type": "boolean",
-                    "description": "True if the operation is successful"
+                "rules": {
+                    "items": {
+                        "$ref": "#/definitions/ChainBatchInputRules"
+                    },
+                    "type": "array",
+                    "x-key-list": [
+                        {
+                            "name": "id",
+                            "type": "integer",
+                            "format": "uint32"
+                        }
+                    ],
+                    "x-key": [
+                        "id"
+                    ]
                 }
             },
             "x-parent": "Chain"
         },
-        "ChainApplyRulesOutput": {
+        "ChainResetCountersOutput": {
             "x-is-yang-action-object": true,
             "properties": {
                 "result": {
