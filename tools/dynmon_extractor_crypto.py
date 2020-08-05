@@ -10,7 +10,6 @@ REQUESTS_TIMEOUT 			= 10
 OUTPUT_DIR 					= 'dump_crypto'
 INTERVAL 					= 2  # seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
 OLD_WINDOW					= 30 # seconds after to we consider a local entry old
-local_dict 					= {} # store the last time we have received an info referring to a specific session, to check if nothing new
 polycubed_endpoint 			= 'http://{}:{}/polycube/v1'
 counter 					= 0
 protocol_map 				= dict(			# map protocol integer value to name
@@ -40,7 +39,6 @@ def main():
 				"Seconds, Bits_client /Seconds, Bits _server / Packets _server, Bits _client / Packets _client, Packets_server"
 				"Packets_client, Bits_server /Bits_client\n")
 
-	clearOldEntriesTask()
 	dynmonConsume(cube_name, interval, interval*1000000000, is_json, output_dir)
 
 
@@ -52,7 +50,8 @@ def dynmonConsume(cube_name, interval, interval_ns, is_json, output_dir):
 	
 	start_time = time.time()
 	metric =  getMetric(cube_name)
-	req_time = time.time()
+	ns = time.time_ns()
+	req_time = ns / 1000000000
 	
 	threading.Timer(interval, dynmonConsume, (cube_name, interval, interval_ns, is_json, output_dir)).start()
 
@@ -60,15 +59,18 @@ def dynmonConsume(cube_name, interval, interval_ns, is_json, output_dir):
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
-	parseAndStore(metric, interval_ns, output_dir, req_time) if is_json is False else parseAndStoreJson(metric, interval_ns, my_count, output_dir, req_time)
+	parseAndStore(metric, ns - interval_ns, output_dir, req_time) if is_json is False else parseAndStoreJson(metric, ns - interval_ns, my_count, output_dir, req_time)
 	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 
 
-def parseAndStoreJson(metric, interval, my_count, output_dir, curr_time):
+def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 	data = []
 	for entry in metric:
 		key = entry['key']
 		value = entry['value']
+		
+		if value['alive_timestamp'] <= last_check_time: 
+			continue
 		
 		if value['server_ip'] == key['saddr']:
 			connIdentifier = (
@@ -85,22 +87,15 @@ def parseAndStoreJson(metric, interval, my_count, output_dir, curr_time):
 				socket.ntohs(key['dport']),
 				protocol_map[key['proto']])
 
-		if connIdentifier in local_dict:  
-			local_dict[connIdentifier]['last_check'] = curr_time
-			if value['alive_timestamp'] < local_dict[connIdentifier]['alive_timestamp'] + interval: continue
-		else: local_dict[connIdentifier] = {
-			'last_check': curr_time,
-			'alive_timestamp': value['alive_timestamp']
-			}
-
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
 		n_bits_server = value['n_bits_server']
 		n_bits_client = value['n_bits_client']
 		duration = value['alive_timestamp'] - value['start_timestamp']
+		seconds = duration / 1000000000
 		values = [value['alive_timestamp'], value['method'], n_packets_server, n_packets_client,
-			n_bits_server, n_bits_client, duration, makeDivision(n_packets_server,duration), makeDivision(n_packets_client,duration),
-			makeDivision(n_bits_server,duration), makeDivision(n_bits_client,duration), makeDivision(n_bits_server,n_packets_server),
+			n_bits_server, n_bits_client, duration, makeDivision(n_packets_server,seconds), makeDivision(n_packets_client,seconds),
+			makeDivision(n_bits_server,seconds), makeDivision(n_bits_client,seconds), makeDivision(n_bits_server,n_packets_server),
 			makeDivision(n_bits_client,n_packets_client), makeDivision(n_packets_server,n_packets_client), makeDivision(n_bits_server,n_bits_client)]
 		data.append({"id": connIdentifier, "value": values})
 
@@ -108,11 +103,14 @@ def parseAndStoreJson(metric, interval, my_count, output_dir, curr_time):
 		json.dump(data, fp, indent=2)
 
 
-def parseAndStore(metric, interval, output_dir, curr_time):
+def parseAndStore(metric, last_check_time, output_dir, curr_time):
 	fp = open(f"{output_dir}/{FILENAME}", 'a')
 	for entry in metric:
 		key = entry['key']
 		value = entry['value']
+		
+		if value['alive_timestamp'] <= last_check_time: 
+			continue
 		
 		if value['server_ip'] == key['saddr']:
 			connIdentifier = (
@@ -128,23 +126,16 @@ def parseAndStore(metric, interval, output_dir, curr_time):
 				socket.ntohs(key['sport']),
 				socket.ntohs(key['dport']),
 				protocol_map[key['proto']])
-
-		if connIdentifier in local_dict:  
-			local_dict[connIdentifier]['last_check'] = curr_time
-			if value['alive_timestamp'] < local_dict[connIdentifier]['alive_timestamp'] + interval: continue
-		else: local_dict[connIdentifier] = {
-			'last_check': curr_time,
-			'alive_timestamp': value['alive_timestamp']
-			}
-
+		
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
 		n_bits_server = value['n_bits_server']
 		n_bits_client = value['n_bits_client']
 		duration = value['alive_timestamp'] - value['start_timestamp']
+		seconds = duration / 1000000000
 		fp.write(f"{value['alive_timestamp']}, {', '.join(map(str, connIdentifier))}, {value['method']}, {n_packets_server}, {n_packets_client}, "
-			f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,duration)}, {makeDivision(n_packets_client,duration)}, "
-			f"{makeDivision(n_bits_server,duration)}, {makeDivision(n_bits_client,duration)}, {makeDivision(n_bits_server,n_packets_server)}, "
+			f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,seconds)}, {makeDivision(n_packets_client,seconds)}, "
+			f"{makeDivision(n_bits_server,seconds)}, {makeDivision(n_bits_client,seconds)}, {makeDivision(n_bits_server,n_packets_server)}, "
 			f"{makeDivision(n_bits_client,n_packets_client)}, {makeDivision(n_packets_server,n_packets_client)}, {makeDivision(n_bits_server,n_bits_client)}\n")
 	fp.close()
 
@@ -172,15 +163,6 @@ def getMetric(cube_name):
 	except requests.exceptions.RequestException:
 		print('Error: unable to connect to polycube daemon.')
 		exit(1) 
-
-
-def clearOldEntriesTask():
-    global local_dict
-    curr_time = time.time()
-    for key in list(local_dict.keys()):
-        if local_dict[key]['last_check'] + OLD_WINDOW < curr_time:
-        	del local_dict[key]
-    threading.Timer(OLD_WINDOW, clearOldEntriesTask, ()).start()
 
 
 def checkIfOutputDirExists(output_dir):
