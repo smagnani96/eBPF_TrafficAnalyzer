@@ -114,47 +114,50 @@ struct udphdr {
 BPF_TABLE_SHARED("lru_hash", struct session_key, struct features, SESSIONS_TRACKED_CRYPTO, N_SESSION);
 
 /*Method to determine which member of the communication is the server*/
-static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcphdr *tcp, uint64_t curr_time, uint8_t *method) {
-  /*If receive Syn, then srcIp is the server*/
-  if(tcp->syn) {
+static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcphdr *tcp, uint8_t *method) {
+  /*If Syn, then srcIp is the server*/
+  if(tcp->syn) {/*If source port < 1024, then srcIp is the server*/
     *method = 1;
     return tcp->ack? ip->saddr : ip->daddr;
   }
 
+  uint16_t dst_port = bpf_htons(tcp->dest);
   /*If destination port < 1024, then dstIp is the server*/
-  if(bpf_htons(tcp->dest) < 1024) {
+  if(dst_port < 1024) {
     *method = 2;
     return ip->daddr;
   }
 
+  uint16_t src_port = bpf_htons(tcp->source);
   /*If source port < 1024, then srcIp is the server*/
-  if(bpf_htons(tcp->source) < 1024) {
+  if(src_port < 1024) {
     *method = 2;
     return ip->saddr;
   }
 
   *method = 3;
-  /*Otherwise, randomly pick*/
-  return curr_time % 2 ? ip->saddr : ip->daddr;
+  /*Otherwise, the lowest port is the server*/
+  return dst_port < src_port ? ip->daddr : ip->saddr;
 }
 
-static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint64_t curr_time, uint8_t *method) {
+static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint8_t *method) {
   /*If destination port < 1024, then dstIp is the server*/
-  if(bpf_htons(udp->dest) < 1024) {
+  uint16_t dst_port = bpf_htons(udp->dest);
+  if(dst_port < 1024) {
     *method = 2;
     return ip->daddr;
   }
 
+  uint16_t src_port = bpf_htons(udp->source);
   /*If source port < 1024, then srcIp is the server*/
-  if(bpf_htons(udp->source) < 1024) {
+  if(src_port < 1024) {
     *method = 2;
     return ip->saddr;
   }
 
-
   *method = 3;
-  /*Otherwise, randomly pick*/
-  return curr_time % 2 ? ip->saddr : ip->daddr;
+  /*Otherwise, the lowest port is the server*/
+  return dst_port < src_port ? ip->daddr : ip->saddr;
 }
 
 /*Method to add a new session in the map*/
@@ -230,7 +233,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if (!value) {
         pcn_log(ctx, LOG_DEBUG, "INGRESS - TCP New session");
         uint8_t method;
-        __be32 server = heuristic_server_tcp(ip, tcp, curr_time, &method);
+        __be32 server = heuristic_server_tcp(ip, tcp, &method);
         insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
         break;
       }
@@ -239,7 +242,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
         pcn_log(ctx, LOG_DEBUG, "INGRESS - TCP Session overwritten");
         uint8_t method;
-        __be32 server = heuristic_server_tcp(ip, tcp, curr_time, &method);
+        __be32 server = heuristic_server_tcp(ip, tcp, &method);
         update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
         break;
       } 
@@ -266,7 +269,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if (!value) {
         pcn_log(ctx, LOG_DEBUG, "INGRESS - UDP New session");
         uint8_t method;
-        __be32 server = heuristic_server_udp(ip, udp, curr_time, &method);
+        __be32 server = heuristic_server_udp(ip, udp, &method);
         insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
         break;
       }
@@ -275,7 +278,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
         pcn_log(ctx, LOG_DEBUG, "INGRESS - UDP Session overwritten");
         uint8_t method;
-        __be32 server = heuristic_server_udp(ip, udp, curr_time, &method);
+        __be32 server = heuristic_server_udp(ip, udp, &method);
         update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
         break;
       } 
