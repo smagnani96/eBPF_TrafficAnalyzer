@@ -34,10 +34,9 @@ def main():
 
 	if is_json is False:
 		with open(f"{output_dir}/{FILENAME}", 'w') as fp:
-			fp.write("Timestamp, IP Client, IP Server, Port Client, Port Server, Protocol, Server Method, Packets_ server, Packets_"
-				"client, Bits_ server, Bits_ client, Duration, Packets_ server /Seconds,Packets_ client /Seconds, Bits_ server"
-				"Seconds, Bits_client /Seconds, Bits _server / Packets _server, Bits _client / Packets _client, Packets_server"
-				"Packets_client, Bits_server /Bits_client\n")
+			fp.write("Timestamp (Unix ns), IP Client, IP Server, Port Client, Port Server, Protocol, Server Method, Packets_server, Packets_client, "
+				"Bits_ server, Bits_ client, Duration (ns), Packets_server / Seconds, Packets_client / Seconds, Bits_server / Seconds, "
+				"Bits_client / Seconds, Bits_server / Packets_server, Bits_client / Packets_client, Packets_server / Packets_client, Bits_server / Bits_client\n")
 
 	dynmonConsume(cube_name, interval, interval*1000000000, is_json, output_dir)
 
@@ -99,6 +98,27 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 			makeDivision(n_bits_client,n_packets_client), makeDivision(n_packets_server,n_packets_client), makeDivision(n_bits_server,n_bits_client)]
 		data.append({"id": connIdentifier, "value": values})
 
+	'''
+	Now you have the list `data` in the following form:
+	[
+		{
+			"id": [clientIp, serverIp, clientPort, serverPort, Protocol],
+			"value": [the entire list of features]
+		}
+	]
+	
+	@@@REPLACE THE FOLLOWING CODE (output to file) with your ML direct interaction@@@
+	
+	**Note**:
+		the `value` field inside each element of the `data` array is an array of the requested features, but IT IS NOT A JSON. So if you want to access
+		the feature "timestamp" it is not possible to do -> data[0]['value']['timestamp'] but data[0]['value'][0]
+		Otherwise, instead of creating on line 95 the array `values` create a json object like:
+		{
+			"timestamp": xxxxx,
+			"ip_src": yyyyy,
+			etc.
+		}
+	'''
 	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
 
@@ -141,7 +161,7 @@ def parseAndStore(metric, last_check_time, output_dir, curr_time):
 
 
 def makeDivision(i, j):
-	return i / j if j else 0
+	return i / j if j else '-'
 
 
 def getMetric(cube_name):
