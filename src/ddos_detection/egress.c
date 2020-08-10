@@ -5,6 +5,8 @@
  *  - TCP
  *  - UDP
  *  - ICMP
+ *
+ * VERSION: 0.9
  */
 
 /*Protocol types according to the standard*/

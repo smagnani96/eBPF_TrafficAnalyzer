@@ -8,7 +8,7 @@ import json
 import os.path
 from os import path
 
-VERSION = '1.1'
+VERSION = '0.9'
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 5 #seconds

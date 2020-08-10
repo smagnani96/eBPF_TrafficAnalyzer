@@ -4,6 +4,8 @@
  * By now the following protocols are checked:
  *  - TCP
  *  - UDP
+ *
+ * VERSION: 0.9
  */
 
 /*Protocol types according to the standard*/
