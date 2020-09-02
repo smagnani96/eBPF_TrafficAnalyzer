@@ -120,6 +120,11 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 			etc.
 		}
 	'''
+	
+	if not data:
+		print('(All entries have already been parsed)')
+		return
+
 	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
 
