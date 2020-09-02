@@ -91,7 +91,7 @@ def parseAndStoreJson(entries, output_dir, counter):
 			socket.ntohs(key[3]),
 			protocol_map[key[4]]	
 		)
-		data.append({"id": key, "packets": value})
+		data.append({"id": parsed_key, "pkets": value})
 
 	'''
 	NOW YOU HAVE `data` which is the json-like object to be printed, retrieved from `flows`:
