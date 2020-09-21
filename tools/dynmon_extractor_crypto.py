@@ -15,6 +15,8 @@ polycubed_endpoint 			= 'http://{}:{}/polycube/v1'
 counter 					= 0
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP")])
+empty_feature 				= dict(
+	[('n_packets_server',0), ('n_packets_client',0), ('n_bits_server',0), ('n_bits_client',0), ('start_timestamp',0), ('alive_timestamp',0), ('method',0), ('server_ip',0)])
 
 
 def main():
@@ -49,29 +51,52 @@ def dynmonConsume(cube_name, interval, interval_ns, is_json, output_dir):
 	counter += 1
 	
 	start_time = time.time()
-	metric =  getMetric(cube_name)
+	metric =  getMetrics(cube_name)['ingress-metrics'][0]['value']
 	ns = time.time_ns()
 	req_time = ns / 1000000000
 	
 	threading.Timer(interval, dynmonConsume, (cube_name, interval, interval_ns, is_json, output_dir)).start()
 	
 	if not metric:
-		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metric: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
 	parseAndStore(metric, ns - interval_ns, output_dir, req_time) if is_json is False else parseAndStoreJson(metric, ns - interval_ns, my_count, output_dir, req_time)
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tMetrics parsed: {len(metric)}')
+	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metric: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tMetric parsed: {len(metric)}')
+
+
+def sumCPUValues(values, ingress_src):
+	ret = empty_feature
+	for value in values:
+		if value['server_ip'] == 0:
+			continue
+		ret['server_ip'] = value['server_ip']
+		if value['server_ip'] == ingress_src:
+			ret['n_packets_server'] += value['n_packets']
+			ret['n_packets_client'] += value['n_packets_reverse']
+			ret['n_bits_server'] += value['n_bits']
+			ret['n_bits_client'] += value['n_bits_reverse']
+		else:
+			ret['n_packets_server'] += value['n_packets_reverse']
+			ret['n_packets_client'] += value['n_packets']
+			ret['n_bits_server'] += value['n_bits_reverse']
+			ret['n_bits_client'] += value['n_bits']
+		if value['alive_timestamp'] > ret['alive_timestamp']:
+			ret['alive_timestamp'] = value['alive_timestamp']
+			ret['start_timestamp'] = value['start_timestamp']
+			ret['method'] = value['method']
+	return ret
 
 
 def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 	data = []
 	for entry in metric:
 		key = entry['key']
-		value = entry['value']
-		
-		if value['alive_timestamp'] <= last_check_time: 
+		value = sumCPUValues(entry['value'], key['saddr'])
+
+		if value['server_ip'] == 0:
 			continue
-		
+
 		if value['server_ip'] == key['saddr']:
 			connIdentifier = (
 				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
@@ -99,14 +124,13 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 			makeDivision(n_bits_client,n_packets_client), makeDivision(n_packets_server,n_packets_client), makeDivision(n_bits_server,n_bits_client)]
 		data.append({"id": connIdentifier, "value": values})
 
+	
+	if not data:
+		print('(All entries have already been parsed)')
+		return
+
 	'''
-	Now you have the list `data` in the following form:
-	[
-		{
-			"id": [clientIp, serverIp, clientPort, serverPort, Protocol],
-			"value": [the entire list of features]
-		}
-	]
+	data is a list of session identifiers-features
 	
 	@@@REPLACE THE FOLLOWING CODE (output to file) with your ML direct interaction@@@
 	
@@ -120,12 +144,7 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 			etc.
 		}
 	'''
-	
-	if not data:
-		print('(All entries have already been parsed)')
-		return
-
-	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
+	with open(f'{output_dir}/result_{my_count}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
 
 
@@ -170,9 +189,9 @@ def makeDivision(i, j):
 	return i / j if j else '-'
 
 
-def getMetric(cube_name):
+def getMetrics(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/SESSIONS_TRACKED_CRYPTO/value', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)

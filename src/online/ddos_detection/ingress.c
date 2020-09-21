@@ -6,7 +6,7 @@
  *  - UDP
  *  - ICMP
  *
- * VERSION: 0.9
+ * VERSION: 1.0
  */
 
 /*Protocol types according to the standard*/
@@ -19,7 +19,6 @@
 #define N_PACKET_PER_SESSION        100             // Number of packet from the same TCP session
 #define N_PACKET_TOTAL \
     N_SESSION * N_PACKET_PER_SESSION                // Number of max packet captured (Size of PACKET_BUFFER)
-#define SESSION_PACKET_RESTART_TIME 1000000000      // Seconds to wait before restarting to track packets from an already tracked session
 
 /*Session identifier*/
 struct session_key {
@@ -28,12 +27,6 @@ struct session_key {
     __be16 sport;                                   //Source port (if ICMP = 0)
     __be16 dport;                                   //Dest port (if ICMP = 0)
     __u8   proto;                                   //Protocol ID
-} __attribute__((packed));
-
-/*Session value*/
-struct session_value {
-  uint64_t last_ins_tstamp;                         // Timestamp of last packet inserted for that session
-  uint32_t n_packets;                               // Total number of packet stored for that session since reset
 } __attribute__((packed));
 
 /*Features to be exported*/
@@ -144,34 +137,10 @@ struct icmphdr {
 } __attribute__((packed));
 
 /*Structure shared between Control Plane - Data Plane*/
-BPF_QUEUESTACK("extern",PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
+BPF_QUEUESTACK_SHARED("queue",PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
 
-/*Tracked session LRU map*/
-BPF_TABLE("extern", struct session_key, struct session_value, SESSIONS_TRACKED_DDOS, N_SESSION);
-
-/*Utility function to check if a session is already tracked and can take the current packet into account. If it is not tracked, try to do it.*/
-static __always_inline int check_or_try_add_session(struct session_key *key, uint64_t curr_time) {
-  struct session_value *value = SESSIONS_TRACKED_DDOS.lookup(key);
-  if (!value) {
-    /*New session accepted*/
-    struct session_value newVal = {.last_ins_tstamp=curr_time, .n_packets=1};
-    SESSIONS_TRACKED_DDOS.insert(key, &newVal);
-  } else {
-    /*Checking if reached number of packets per session stored*/
-    if(value->n_packets == N_PACKET_PER_SESSION) {
-        /*Checking if passed enough time since the last packed stored*/
-        if(curr_time - value->last_ins_tstamp < SESSION_PACKET_RESTART_TIME) {
-            return 1;
-        }
-        /*Restart considering packets for that session*/
-        value->n_packets = 0;
-    }
-    /*Already present session*/
-    value->last_ins_tstamp = curr_time;
-    value->n_packets +=1;  
-  }
-  return 0;
-}
+/*Tracked session map*/
+BPF_TABLE_SHARED("hash", struct session_key, uint64_t, SESSIONS_TRACKED_DDOS, N_SESSION);
 
 /*Default function called at each packet on interface*/
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
@@ -205,6 +174,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
   
   /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
   uint64_t curr_time = pcn_get_time_epoch();
+  uint64_t zero = 0;
 
   switch (ip->protocol) {
     case IPPROTO_TCP: {
@@ -214,15 +184,21 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         return RX_OK;
       }
       /*Check if it is already tracked or try to track it*/
-      struct session_key key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
-      if(check_or_try_add_session(&key, curr_time) != 0) {
-        return RX_OK;
+      struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
+      uint64_t *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
+      if(!value) {
+        break;
       }
+
+      /*Check if max packet reached*/
+      if(*value == N_PACKET_PER_SESSION){
+        break;
+      }
+      *value +=1;
 
       /*Now I'm sure to take the packet*/
       uint16_t len = bpf_ntohs(ip->tot_len);
-      struct session_key real_key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
-      struct features new_features = {.id=real_key, .length=len, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off),
+      struct features new_features = {.id=key, .length=len, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off),
         .tcpAck=tcp->ack_seq, .tcpWin=bpf_ntohs(tcp->window), .tcpLen=(uint16_t)(len - ip_header_len - sizeof(*tcp)), 
         .tcpFlags=(tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4)
                 | (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin};
@@ -239,14 +215,20 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
 
       /*Check if it is already tracked or try to track it*/
-      struct session_key key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=0, .dport=0, .proto=ip->protocol};
-      if(check_or_try_add_session(&key, curr_time) != 0) {
-        return RX_OK;
+      struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=0, .dport=0, .proto=ip->protocol};
+      uint64_t *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
+      if(!value) {
+        break;
       }
 
+      /*Check if max packet reached*/
+      if(*value == N_PACKET_PER_SESSION){
+        break;
+      }
+      *value +=1;
+
       /*Now I'm sure to take the packet*/
-      struct session_key real_key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=0, .dport=0, .proto=ip->protocol};
-      struct features new_features = {.id=real_key, .length=bpf_ntohs(ip->tot_len), .icmpType=icmp->type,
+      struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .icmpType=icmp->type,
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
       /*Try to push those features into PACKET_BUFFER*/
@@ -262,13 +244,19 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=udp->source, .dport=udp->dest, .proto=ip->protocol};
       /*Check if it is already tracked or try to track it*/
-      if(check_or_try_add_session(&key, curr_time) != 0) {
-        return RX_OK;
+      uint64_t *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
+      if(!value) {
+        break;
       }
 
+      /*Check if max packet reached*/
+      if(*value == N_PACKET_PER_SESSION){
+        break;
+      }
+      *value +=1;
+
       /*Now I'm sure to take the packet*/
-      struct session_key real_key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
-      struct features new_features = {.id=real_key, .length=bpf_ntohs(ip->tot_len), .udpSize=bpf_ntohs(udp->len) - sizeof(*udp),
+      struct features new_features = {.id=key, .length=bpf_ntohs(ip->tot_len), .udpSize=bpf_ntohs(udp->len) - sizeof(*udp),
         .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
       /*Try to push those features into PACKET_BUFFER*/
