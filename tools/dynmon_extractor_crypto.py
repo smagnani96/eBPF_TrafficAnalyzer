@@ -54,13 +54,13 @@ def dynmonConsume(cube_name, interval, interval_ns, is_json, output_dir):
 	req_time = ns / 1000000000
 	
 	threading.Timer(interval, dynmonConsume, (cube_name, interval, interval_ns, is_json, output_dir)).start()
-
+	
 	if not metric:
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
 	parseAndStore(metric, ns - interval_ns, output_dir, req_time) if is_json is False else parseAndStoreJson(metric, ns - interval_ns, my_count, output_dir, req_time)
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
+	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tMetrics parsed: {len(metric)}')
 
 
 def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
