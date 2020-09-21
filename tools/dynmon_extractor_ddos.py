@@ -6,9 +6,9 @@ import time, threading, argparse, requests, json, socket, os
 VERSION 					= '0.9'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT 				= 9000
-REQUESTS_TIMEOUT 			= 10
+REQUESTS_TIMEOUT 			= 200
 OUTPUT_DIR 					= 'dump_ddos'
-INTERVAL 					= 2   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
+INTERVAL 					= 1   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP"), (1, "ICMP")])
 
@@ -91,7 +91,7 @@ def parseAndStoreJson(entries, output_dir, counter):
 			socket.ntohs(key[3]),
 			protocol_map[key[4]]	
 		)
-		data.append({"id": parsed_key, "pkets": value})
+		data.append({"id": parsed_key, "packets": value})
 
 	'''
 	NOW YOU HAVE `data` which is the json-like object to be printed, retrieved from `flows`:
