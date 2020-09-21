@@ -3,7 +3,7 @@
 
 import time, threading, argparse, requests, json, socket, os
 
-VERSION 					= '0.9'
+VERSION 					= '1.0'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT 				= 9000
 REQUESTS_TIMEOUT 			= 200

@@ -19,10 +19,10 @@
 /*Features to be exported*/
 struct features {
     //Real features
-    uint64_t n_packets;                             // Number of Ingress packets
-    uint64_t n_packets_reverse;                     // Number of Egress packets
-    uint64_t n_bits;                                // Total Ingress bits
-    uint64_t n_bits_reverse;                        // Total Egress bits
+    uint64_t n_packets;                             // Number of packets on one direction
+    uint64_t n_packets_reverse;                     // Number of packets on opposite direction
+    uint64_t n_bytes;                               // Total bytes on one direction
+    uint64_t n_bytes_reverse;                       // Total bytes on opposite direction
     uint64_t start_timestamp;                       // Connection begin timestamp
     uint64_t alive_timestamp;                       // Last message received timestamp
     uint32_t  method;                               // The method used to determine the server (4 byte to avoid misreading)
@@ -207,13 +207,13 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
           pcn_log(ctx, LOG_DEBUG, "TCP Session overwritten with normal key");
           uint32_t method;
           __be32 server = heuristic_server_tcp(ip, tcp, &method);
-          struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+          struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
           SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
           break;
         } 
         /*Update current session*/
         value->n_packets += 1;
-        value->n_bits += pkt_len;
+        value->n_bytes += pkt_len;
         value->alive_timestamp = curr_time;
         break;
       }
@@ -229,13 +229,13 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
           pcn_log(ctx, LOG_DEBUG, "TCP Session overwritten with reverse_key");
           uint32_t method;
           __be32 server = heuristic_server_tcp(ip, tcp, &method);
-          struct features new_val = {.n_packets_reverse=1, .n_bits_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+          struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
           SESSIONS_TRACKED_CRYPTO.update(&reverse_key, &new_val);
           break;
         } 
         /*Update current session*/
         value->n_packets_reverse += 1;
-        value->n_bits_reverse += pkt_len;
+        value->n_bytes_reverse += pkt_len;
         value->alive_timestamp = curr_time;
         break;
       }
@@ -244,7 +244,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       pcn_log(ctx, LOG_DEBUG, "TCP New session");
       uint32_t method;
       __be32 server = heuristic_server_tcp(ip, tcp, &method);
-      struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+      struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
       SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
       break;
     }
@@ -268,13 +268,13 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
           pcn_log(ctx, LOG_DEBUG, "UDP Session overwritten with normal key");
           uint32_t method;
           __be32 server = heuristic_server_udp(ip, udp, &method);
-          struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+          struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
           SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
           break;
         }
         /*Update current session*/
         value->n_packets += 1;
-        value->n_bits += pkt_len;
+        value->n_bytes += pkt_len;
         value->alive_timestamp = curr_time;
         pcn_log(ctx, LOG_DEBUG, "UDP Session updated with normal key");
         break;
@@ -289,13 +289,13 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
           pcn_log(ctx, LOG_DEBUG, "UDP Session overwritten with reverse_key");
           uint32_t method;
           __be32 server = heuristic_server_udp(ip, udp, &method);
-          struct features new_val = {.n_packets_reverse=1, .n_bits_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+          struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
           SESSIONS_TRACKED_CRYPTO.update(&reverse_key, &new_val);
           break;
         }
         /*Update current session*/
         value->n_packets_reverse += 1;
-        value->n_bits_reverse += pkt_len;
+        value->n_bytes_reverse += pkt_len;
         value->alive_timestamp = curr_time;
         pcn_log(ctx, LOG_DEBUG, "UDP Session updated with normal key");
         break;
@@ -305,7 +305,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       pcn_log(ctx, LOG_DEBUG, "UDP New session");
       uint32_t method;
       __be32 server = heuristic_server_udp(ip, udp, &method);
-      struct features new_val = {.n_packets=1, .n_bits=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+      struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
       SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
       break;
     }

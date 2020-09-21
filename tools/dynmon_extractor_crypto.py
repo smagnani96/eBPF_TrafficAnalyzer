@@ -3,7 +3,7 @@
 
 import time, threading, argparse, requests, json, socket, os
 
-VERSION = '0.9'
+VERSION = '1.0'
 FILENAME 					= 'results.csv'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT				= 9000
@@ -16,7 +16,7 @@ counter 					= 0
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP")])
 empty_feature 				= dict(
-	[('n_packets_server',0), ('n_packets_client',0), ('n_bits_server',0), ('n_bits_client',0), ('start_timestamp',0), ('alive_timestamp',0), ('method',0), ('server_ip',0)])
+	[('n_packets_server',0), ('n_packets_client',0), ('n_bytes_server',0), ('n_bytes_client',0), ('start_timestamp',0), ('alive_timestamp',0), ('method',0), ('server_ip',0)])
 
 
 def main():
@@ -74,13 +74,13 @@ def sumCPUValues(values, ingress_src):
 		if value['server_ip'] == ingress_src:
 			ret['n_packets_server'] += value['n_packets']
 			ret['n_packets_client'] += value['n_packets_reverse']
-			ret['n_bits_server'] += value['n_bits']
-			ret['n_bits_client'] += value['n_bits_reverse']
+			ret['n_bytes_server'] += value['n_bytes']
+			ret['n_bytes_client'] += value['n_bytes_reverse']
 		else:
 			ret['n_packets_server'] += value['n_packets_reverse']
 			ret['n_packets_client'] += value['n_packets']
-			ret['n_bits_server'] += value['n_bits_reverse']
-			ret['n_bits_client'] += value['n_bits']
+			ret['n_bytes_server'] += value['n_bytes_reverse']
+			ret['n_bytes_client'] += value['n_bytes']
 		if value['alive_timestamp'] > ret['alive_timestamp']:
 			ret['alive_timestamp'] = value['alive_timestamp']
 			ret['start_timestamp'] = value['start_timestamp']
@@ -114,8 +114,8 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
-		n_bits_server = value['n_bits_server']
-		n_bits_client = value['n_bits_client']
+		n_bits_server = value['n_bytes_server']*8
+		n_bits_client = value['n_bytes_client']*8
 		duration = value['alive_timestamp'] - value['start_timestamp']
 		seconds = duration / 1000000000
 		values = [value['alive_timestamp'], value['method'], n_packets_server, n_packets_client,
@@ -152,9 +152,9 @@ def parseAndStore(metric, last_check_time, output_dir, curr_time):
 	fp = open(f"{output_dir}/{FILENAME}", 'a')
 	for entry in metric:
 		key = entry['key']
-		value = entry['value']
-		
-		if value['alive_timestamp'] <= last_check_time: 
+		value = sumCPUValues(entry['value'], key['saddr'])
+
+		if value['server_ip'] == 0:
 			continue
 		
 		if value['server_ip'] == key['saddr']:
@@ -174,8 +174,8 @@ def parseAndStore(metric, last_check_time, output_dir, curr_time):
 		
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
-		n_bits_server = value['n_bits_server']
-		n_bits_client = value['n_bits_client']
+		n_bits_server = value['n_bytes_server']*8
+		n_bits_client = value['n_bytes_client']*8
 		duration = value['alive_timestamp'] - value['start_timestamp']
 		seconds = duration / 1000000000
 		fp.write(f"{value['alive_timestamp']}, {', '.join(map(str, connIdentifier))}, {value['method']}, {n_packets_server}, {n_packets_client}, "
