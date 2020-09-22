@@ -6,9 +6,9 @@ import time, threading, argparse, requests, json, socket, os
 VERSION 					= '1.0'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT 				= 9000
-REQUESTS_TIMEOUT 			= 200
+REQUESTS_TIMEOUT 			= 300
 OUTPUT_DIR 					= 'dump_ddos'
-INTERVAL 					= 1   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
+INTERVAL 					= 10   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP"), (1, "ICMP")])
 

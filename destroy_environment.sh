@@ -4,22 +4,22 @@ set -e
 
 dynmon_ddos="monitor_ddos"
 dynmon_crypto="monitor_crypto"
+firewall="fw"
 
-ret=$(docker container ls | grep s41m0n/polycube)
-if [ $? -eq 0 ]
+read container_id x<<<$(docker container ls | grep s41m0n/polycube:toshi)
+if [ -z $container_id ]
 then
-	echo "Found Polycube daemon running"
-	read container_id x<<<$(docker container ls | grep portainer)
-	docker container stop $container_id
+	exit 0
 fi
 
-echo "Destroying Dynmon for DDos detection"
-curl -X DELETE http://localhost:9000/polycube/v1/dynmon/$dynmon_ddos
+echo "Found Polycube daemon running"
+	
+docker container kill $container_id
 
-echo "Destroying Dynmon for Crypto detection"
-curl -X DELETE http://localhost:9000/polycube/v1/dynmon/$dynmon_crypto
-
-echo "Destroying Firewall instance"
-curl -X DELETE http://localhost:9000/polycube/v1/firewall/$firewall
-
+#echo "Destroying Dynmon for DDos detection"
+#curl -X DELETE http://localhost:9000/polycube/v1/dynmon/$dynmon_ddos
+#echo "Destroying Dynmon for Crypto detection"
+#curl -X DELETE http://localhost:9000/polycube/v1/dynmon/$dynmon_crypto
+#echo "Destroying Firewall instance"
+#curl -X DELETE http://localhost:9000/polycube/v1/firewall/$firewall
 echo "Your environment is clean :)"
