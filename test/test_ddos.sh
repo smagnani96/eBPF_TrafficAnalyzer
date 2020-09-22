@@ -7,6 +7,12 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+if [ $# -eq 0 ]
+  then
+    echo "No arguments supplied"
+    exit 1
+fi
+
 # include helper.bash file: used to provide some common function across testing scripts
 source "helpers.bash"
 
@@ -24,7 +30,7 @@ curl -d '{"peer": "veth1"}' -H "Content-Type: application/json" http://localhost
 curl -d '{"peer": "veth2"}' -H "Content-Type: application/json" http://localhost:9000/polycube/v1/simplebridge/br1/ports/port2
 
 sleep 2
-../tools/dynmon_injector.py monitor br1:port1 "../src/ddos_detection/feature_extractor.json"
+../tools/dynmon_injector.py monitor br1:port1 "../src/$1/ddos_detection/dataplane.json"
 sleep 2
 
 sudo ip netns exec ns2 iperf3 -s &>/dev/null &

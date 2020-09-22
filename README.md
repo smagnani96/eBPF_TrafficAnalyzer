@@ -1,6 +1,6 @@
 # eBPF_TrafficAnalyzer
 
-eBPF C programs to analyze some packets' feature in order to detect (and possibly prevent) a possible ongoing network attack.
+eBPF C programs to analyze some packets' feature in order to detect a possible ongoing network attack and apply countermeasures.
 
 Highly recommended to be used within the [Polycube](https://github.com/polycube-network/polycube) framework.
 
@@ -8,14 +8,13 @@ Tutorial: https://drive.google.com/file/d/1udg_jhvMqHZJMNc2nm63liXwkENiONpp/view
 
 ## DDos detection
 
-This section covers the [ddos_detection/feature\_extractor.c](./src/ddos_detection) program related to DDos detection.
+This section covers the [online_ddos](./src/online/ddos\_detection) and [offline_ddos](./src/offline/ddos\_detection) programs related to DDos detection.
 
 The following parameters are vital:
 
 * *N_SESSION*, the number of max TCP session tracked
 * *N_PACKET_PER_SESSION*, the number of packet from the same TCP session
 * *N_PACKET_TOTAL*, the number of max packet captured (size of PACKET_BUFFER, usually N_SESSION*N_PACKET_PER_SESSION)
-* *SESSION_PACKET_RESTART_TIME*, seconds to wait before restarting to track packets from an already tracked session
 
 The current filtered protocols are:
 
@@ -27,24 +26,28 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-Every session can store a limited amount of captured packets. Once that the maximum is reached, it starts checking if that connection is still active (other packets are arriving) for the following *SESSION_PACKET_RESTART_TIME* seconds, and then the session will be automatically tracked again. This is to allow me to intercept packets belonging to many flows, avoiding to overlook other important ones.
-
-When a new untracked session is detected, it is automatically added to all the other tracked ones using an LRU policy. If the map containing the sessions is large enough, this would mean that the LRU session who will be replaced is very old. Thanks to this policy and data structure (LRU_HASH map), I do not have to worry about memory leaks or flushing the table.
-
-These steps are performed both in the *INGRESS* and *EGRESS* data path, using alongside maps. Their content will later be read and unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script.
+Every session can store a limited amount of captured packets. Once that the maximum is reached, no more packets for that session will be captured anymore, untill the next capture time-window, which is dictated by the extraction (using the python script) of all the collected metrics so far.
 
 The packets are stored in a Queue, meaning that they are automatically deleted when read (push/pop policy).
 
 Reading the required features does not lock the map for the dataplane, which can continue monitoring incoming packets. This is thanks to an advance swap feature, which allow me to swap the required metric with a new appositely created one, letting the user completely unaware of what is going on.
 
+While for the "online" scenario these actions are performed both in the *INGRESS* and *EGRESS* data path using shared maps, the "offline" scenario covers all the use cases where the entire traffic (client and server) is reaching the interface of interest, but never leaving it (e.g., using tcpreplay). The latter case implements more controls to check whether a specific connection is being tracked with the reversed identifier.
+
+The map content will later be read and unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script.
+
+The methods to heuristically find out which is the server are the following:
+
+* if TCP communication and TCP->SYN detected, then the destination IP is the server 
+* if destination port < 1024, then destination IP is the server
+* if source port < 1024, then source IP is the server
+* otherwise choose the IP with the lowest port associated
+
 ## Crypto mining
 
-This section covers the [crypto_mining/feature\_extractor.c](./src/crypto_mining) program related to Crypto Mining detection.
+This section covers the [online_crypto_mining](./src/online/crypto\_mining) and [offline_crypto_mining](./src/offline/crypto\_mining) programs related to Crypto Mining detection.
 
-The vital parameters are: 
-
-* *N_SESSION*, represents the max number of sessions tracked
-* *SESSION_DROP_AFTER_TIME*, is the time after a certain session should be considered old and overwritten
+The only vital parameters is *N_SESSION*, which represents the max number of sessions tracked.
 
 The current filtered protocols are:
 
@@ -55,30 +58,30 @@ When booted of course the program does not have any information about which pack
 
 Every packet belonging to a current tracked TCP session or to one of the other considered protocols is analyzed, and some information are stored in the metric map to be consulted later on.
 
-When the sessions map is full, the oldest entry is deleted, according to LRU policy which ensures that the oldest data is replaced when arriving new one.
+When the sessions map is full, no more connections will be tracked, untill a new time-window begins, meaning that the metrics gathered so far are extracted (using the python script).
 
-For each session, the following parameters are stored both for *INGRESS* and *EGRESS* data path:
+For each session, the following parameters are stored:
 
 * *n_packets_server*
 * *n_packets_client*
 * *n_bits_server*
 * *n_bits_client*
-* *start_timestamp*: timestamp of the first passed packet
-* *alive_timestamp*: timestamp of the last passed packet
-* *method*: the method used to understand which is the server in the communication
+* *duration*
+* *method*
 
 The methods to heuristically find out which is the server are the following:
 
 * if TCP communication and TCP->SYN detected, then the destination IP is the server 
 * if destination port < 1024, then destination IP is the server
-* otherwise choose randomly
+* if source port < 1024, then source IP is the server
+* otherwise choose the IP with the lowest port associated
 
 ## Infrastructure Architecture
 
 Thanks to the [Dynmon](https://polycube-network.readthedocs.io/en/latest/services/pcn-dynmon/dynmon.html) service recently integrated in the framework, users
 are able to inject dynamically new eBPB code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
 
-Using the [dymon\_injector.py](./tools/dynmon_injector.py) script a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations it has gathered. But what information? Those we tell the probe to gather. In fact both in [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json)  and [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature_extractor.json) files, users not only insert their own code, but they also specify which metrics should be exported by the service.
+Using the [dymon\_injector.py](./tools/dynmon_injector.py) script a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations it has gathered. But what information? Those we tell the probe to gather. In all the `dataplane.json` files, users not only insert their own code, but they also specify which metrics should be exported by the service.
 
 The injectable code should be formatted and escaped accordingly to JSON format. To achieved that, an apposite python [formatter.py](./tools/formatter.py) script has been created.
 
@@ -108,7 +111,7 @@ You can also tell Dynmon to erase the map after the read. Dynmon automatically u
 * OS: Ubuntu >= 18.04 (20.04 works fine)
 * Kernel: 5.7.0 (also 5.4.0-33-generic is good, but map extraction can be slower due to some features missing)
 * Disk space: >= 210 MB (Polycube Docker) + needed space for output files
-* Memory: >= 100MB + X (where X is the size of the used BPF_MAP depending on parameters like: N°Sessions, N°Packets_per_session,...)
+* Memory: >= 100MB + X + Y*CPU_cores (where X is the size of the used BPF_MAP for DDoS detection, and Y the size of the BPF_MAP in the Crypto-Mining scenario)
 
 ### OS installation
 
@@ -143,15 +146,26 @@ The script [setup_environment.sh](./setup_environment.sh) manages and launches e
 * The Crypto monitor (named `monitor_crypto`)
 * The Firewall (named `fw`) with the default `FORWARD` policy
 
-The final architecture will be something like:
+This file has an important parameter, the `online` variable, which is used to decide which infrastructure to be deployed. By default it is deployed the following architecture, where the device running the probes is not in between the communication, but all the traffic is copied to it.
 
 ```bash
-                                                               +-----------+   
-                          +----+----------------+--------------+           |   
- ---|INTERNET|------------| fw | monitor_crypto | monitor_ddos | Interface |-----|User_Device|
-                          +----+----------------+--------------+  wlp59s0  |   
-                                                               +-----------+  
+      |A|                                       +-----------+   
+       |        -----------------+--------------+           |   
+       +--------| monitor_crypto | monitor_ddos | Interface |-----|Offline_device|
+       |        -----------------+--------------+  wlp59s0  |   
+      |B|                                       +-----------+  
 ```
+
+On the other hand, with the `online=1` parameter, the deployed architecture requires the device running the probes to be in between of the communication or in one of the two endpoints inferfaces, as follows.
+
+```bash
+                                                        +-----------+   
+                   +----+----------------+--------------|           |
+ ---|A|------------| fw | monitor_crypto | monitor_ddos | Interface |-----|Middle_or_end_device|--------------|B|
+                   +----+----------------+--------------|  wlp59s0  |   
+                                                        +-----------+  
+```
+
 
 Otherwise, if you prefer to manually set it up with custom names you can continue to read the following section.
 
@@ -161,7 +175,7 @@ Otherwise, if you prefer to manually set it up with custom names you can continu
 Download my personal Polycube image with all the latest features needed.
 
 ```bash
-docker pull s41m0n/polycube:latest
+docker pull s41m0n/polycube:toshi
 ```
 
 Despite having a Docker container, Polycube needs linux headers from the hosts to compile and inject at lower layers (XDP/TC).
@@ -176,7 +190,7 @@ Finally, Polycube can be now run using the following command:
 ```bash
 docker run -p 9000:9000 --rm -it --privileged --network host \
 -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -v /etc/localtime:/etc/localtime:ro \
-s41m0n/polycube /bin/bash -c 'polycubed'
+s41m0n/polycube:toshi /bin/bash -c 'polycubed'
 ```
 
 As you can see, the port 9000 has been forwarded to the Docker where the Polycube server is listening through a REST API.
@@ -201,13 +215,26 @@ It automatically contacts Polycube at `localhost:9000` which, if you followed th
 #### DDos
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/ddos_detection/feature_extractor.json
+./dynmon_injector.py monitor wlp59s0  ../src/online/ddos_detection/dataplane.json
 ```
+
+or
+
+```bash
+./dynmon_injector.py monitor wlp59s0  ../src/offline/ddos_detection/dataplane.json
+```
+
 
 #### Crypto
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/crypto_mining/feature_extractor.json
+./dynmon_injector.py monitor wlp59s0  ../src/online/crypto_mining/dataplane.json
+```
+
+or
+
+```bash
+./dynmon_injector.py monitor wlp59s0  ../src/offline/crypto_mining/dataplane.json
 ```
 
 ### Loading Firewall
@@ -229,13 +256,13 @@ For more accepted parameters (like interval between 2 read operation), type `--h
 ### DDos
 
 ```bash
-./dynmon_extractor_ddos.py monitor
+./dynmon_extractor_ddos.py monitor -j
 ```
 
 ### Crypto
 
 ```bash
-./dynmon_extractor_crypto.py monitor
+./dynmon_extractor_crypto.py monitor -j
 ```
 
 ### Manage Firewall rules
@@ -309,7 +336,7 @@ All done :)
 
 ## General Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my [ddos_detection](./src/ddos_detection) or [crypto_mining](./src/crypto_mining) example.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my `dataplane.json` examples, both for the online and offline scenario.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 
@@ -321,7 +348,7 @@ In the code, you can use all data structures eBPF offers you. Later you can deci
 
 ### Step2 - Format code
 
-Once finished your program, you should escape it to be inserted inside one of [ddos_detection/feature\_extractor.json](./src/ddos_detection/feature_extractor.json) or [crypto_mining/feature\_extractor.json](./src/crypto_mining/feature\_extractor.json) file under the `"code"` field. 
+Once finished your program, you should escape it to be inserted inside one of the `dataplane.json` files under the `"code"` field. 
 Moreover, you should also specify in this file all the metrics (also OpenMetrics is supported) to be exported between the service and the outside world and their configurations.
 
 All the metrics `map_name` should refer to existing map you have previously declared in your eBPF C code, otherwise it will not be found.
@@ -340,7 +367,7 @@ This step consists in inserting your code inside the service. To do that, you ca
 ~$  ./dynmon_injector.py <monitor_name> <network_interface> <json_filename.json>
 ```
 
-An example could be `./dynmon_injector.py monitor1 br1:port1 feature_extractor.json` where `br1:port1` are a Polycube Simplebridge and a port previously created and assigned, but it could be any value (also your computer `eth0` or `wlp59s0` interfaces).
+An example could be `./dynmon_injector.py monitor1 br1:port1 dataplane.json` where `br1:port1` are a Polycube Simplebridge and a port previously created and assigned, but it could be any value (also your computer `eth0` or `wlp59s0` interfaces).
 
 ### Step4 - Extract results
 
@@ -361,7 +388,7 @@ Under the [test](./test) directory there is the used script to perform an iPerf3
 
 The input parameters are the following:
 
-* `-f <config_file>` the configuration file to be injected in the created Dynmon instance (the one to be tested, default [ddos_detection/feature_extractor.json](./src/ddos_detection/feature_extractor.json))
+* `-f <config_file>` the configuration file to be injected in the created Dynmon instance
 * `-c <n_connessions>` the number of parallel connections to be opened to the server (default 1 using the entire bandwidth)
 
 Briefly, a Simplebridge service is created and two ports in two different network namespaces are assigned to it with the corresponding IP addressed:

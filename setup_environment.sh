@@ -1,13 +1,22 @@
 #! /bin/bash
 set -x
 
+# Set online=1 in case the probe is directly involved in switching the packets (the interface receives both incoming and outgoing packets)
+online=1
 interface="wlp59s0"
 firewall="fw"
 dynmon_ddos="monitor_ddos"
 dynmon_crypto="monitor_crypto"
 
-path_ddos_config="./src/ddos_detection/feature_extractor.json"
-path_crypto_config="./src/crypto_mining/feature_extractor.json"
+if [ $online -eq 0 ]
+then
+	path_ddos_config="./src/offline/ddos_detection/dataplane.json"
+	path_crypto_config="./src/offline/crypto_mining/dataplane.json"
+else
+	path_ddos_config="./src/online/ddos_detection/dataplane.json"
+	path_crypto_config="./src/online/crypto_mining/dataplane.json"
+fi
+
 
 ret=$(docker container ls | grep "s41m0n/polycube:toshi")
 if [ $? -eq 0 ]

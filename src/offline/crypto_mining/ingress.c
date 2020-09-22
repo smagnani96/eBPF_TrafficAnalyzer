@@ -5,7 +5,7 @@
  *  - TCP
  *  - UDP
  *
- * VERSION: 0.9
+ * VERSION: 1.0
  */
 
 /*Protocol types according to the standard*/
@@ -14,18 +14,17 @@
 
 /* Number of max TCP session tracked */
 #define N_SESSION 10000
-#define SESSION_DROP_AFTER_TIME 30000000000
 
 /*Features to be exported*/
 struct features {
     //Real features
-    uint64_t n_packets_server;                      // Number of packets from server
-    uint64_t n_packets_client;                      // Number of packets from client
-    uint64_t n_bits_server;                         // Total bits from server
-    uint64_t n_bits_client;                         // Total bits from client
+    uint64_t n_packets;                             // Number of packets on one direction
+    uint64_t n_packets_reverse;                     // Number of packets on opposite direction
+    uint64_t n_bytes;                               // Total bytes on one direction
+    uint64_t n_bytes_reverse;                       // Total bytes on opposite direction
     uint64_t start_timestamp;                       // Connection begin timestamp
     uint64_t alive_timestamp;                       // Last message received timestamp
-    uint8_t  method;                                // The method used to determine the server
+    uint32_t  method;                               // The method used to determine the server (4 byte to avoid misreading)
     __be32 server_ip;                               // The server address
 } __attribute__((packed));
 
@@ -112,11 +111,11 @@ struct udphdr {
     __sum16 check;
 } __attribute__((packed));
 
-/*Tracked session LRU map*/
-BPF_TABLE("extern", struct session_key, struct features, SESSIONS_TRACKED_CRYPTO, N_SESSION);
+/*Tracked session map*/
+BPF_TABLE("percpu_hash", struct session_key, struct features, SESSIONS_TRACKED_CRYPTO, N_SESSION);
 
 /*Method to determine which member of the communication is the server*/
-static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcphdr *tcp, uint8_t *method) {
+static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcphdr *tcp, uint32_t *method) {
   /*If Syn, then srcIp is the server*/
   if(tcp->syn) {/*If source port < 1024, then srcIp is the server*/
     *method = 1;
@@ -142,7 +141,7 @@ static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcph
   return dst_port < src_port ? ip->daddr : ip->saddr;
 }
 
-static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint8_t *method) {
+static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint32_t *method) {
   /*If destination port < 1024, then dstIp is the server*/
   uint16_t dst_port = bpf_htons(udp->dest);
   if(dst_port < 1024) {
@@ -160,38 +159,6 @@ static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udph
   *method = 3;
   /*Otherwise, the lowest port is the server*/
   return dst_port < src_port ? ip->daddr : ip->saddr;
-}
-
-/*Method to add a new session in the map*/
-static __always_inline void insert_new_session(__be32 server, uint64_t curr_time, uint16_t pkt_len, bool is_server, struct session_key *key, uint8_t method) {
-  if(is_server) {
-    struct features new_val = {.n_packets_server=1, .n_bits_server=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-    SESSIONS_TRACKED_CRYPTO.insert(key, &new_val);
-  } else {
-    struct features new_val = {.n_packets_client=1, .n_bits_client=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};
-    SESSIONS_TRACKED_CRYPTO.insert(key, &new_val);
-  }
-}
-
-static __always_inline void update_expired_session(__be32 server, uint64_t curr_time, uint16_t pkt_len, bool is_server, struct session_key *key, uint8_t method) {
-  if(is_server) {
-    struct features new_val = {.n_packets_server=1, .n_bits_server=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-    SESSIONS_TRACKED_CRYPTO.update(key, &new_val);
-  } else {
-    struct features new_val = {.n_packets_client=1, .n_bits_client=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};
-    SESSIONS_TRACKED_CRYPTO.update(key, &new_val);
-  }
-}
-
-static __always_inline void update_session(struct features *value, uint16_t pkt_len, uint64_t curr_time, bool is_server) {
-  if(is_server) {
-    value->n_packets_server += 1;
-    value->n_bits_server += pkt_len;
-  } else {
-    value->n_packets_client += 1;
-    value->n_bits_client += pkt_len;
-  }
-  value->alive_timestamp = curr_time;
 }
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {
@@ -225,33 +192,41 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if ((void *) tcp + sizeof(*tcp) > data_end)
         return RX_OK;
 
-      struct session_key key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
+      struct session_key key = {.saddr=ip->saddr, .daddr= ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
       /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
       uint64_t curr_time = pcn_get_time_epoch();
       uint16_t pkt_len = bpf_ntohs(ip->tot_len);
 
-      /*Check if new session*/
+      /*Check if match normal key*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
-      if (!value) {
-        pcn_log(ctx, LOG_DEBUG, "EGRESS - TCP New session");
-        uint8_t method;
-        __be32 server = heuristic_server_tcp(ip, tcp, &method);
-        insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
+      if (value) {
+        pcn_log(ctx, LOG_DEBUG, "TCP matched normal key");
+        /*Update current session*/
+        value->n_packets += 1;
+        value->n_bytes += pkt_len;
+        value->alive_timestamp = curr_time;
         break;
       }
 
-      /*Check if the entry was too old => overwrite it*/
-      if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-        pcn_log(ctx, LOG_DEBUG, "EGRESS - TCP Session overwritten");
-        uint8_t method;
-        __be32 server = heuristic_server_tcp(ip, tcp, &method);
-        update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
+      /*Check if match reverse key*/
+      struct session_key reverse_key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
+      value = SESSIONS_TRACKED_CRYPTO.lookup(&reverse_key);
+ 
+      if(value) {
+        pcn_log(ctx, LOG_DEBUG, "TCP matched reverse_key");
+        /*Update current session*/
+        value->n_packets_reverse += 1;
+        value->n_bytes_reverse += pkt_len;
+        value->alive_timestamp = curr_time;
         break;
-      } 
+      }
 
-      /*Update current session*/
-      update_session(value, pkt_len, curr_time, value->server_ip==ip->saddr);
-      pcn_log(ctx, LOG_DEBUG, "EGRESS - TCP Session updated");
+      /*Insert new one with normal key*/
+      pcn_log(ctx, LOG_DEBUG, "TCP New session");
+      uint32_t method;
+      __be32 server = heuristic_server_tcp(ip, tcp, &method);
+      struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+      SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
       break;
     }
     case IPPROTO_UDP: {
@@ -261,33 +236,40 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         return RX_OK;
       }
 
-      struct session_key key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
+      struct session_key key = {.saddr=ip->saddr, .daddr= ip->daddr, .sport=udp->source, .dport=udp->dest, .proto=ip->protocol};
       /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
       uint64_t curr_time = pcn_get_time_epoch();
       uint16_t pkt_len = bpf_ntohs(ip->tot_len);
 
-      /*Check if new session*/
+      /*Check if match normal key*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
-      if (!value) {
-        pcn_log(ctx, LOG_DEBUG, "EGRESS - UDP New session");
-        uint8_t method;
-        __be32 server = heuristic_server_udp(ip, udp, &method);
-        insert_new_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
+      if (value) {
+        /*Update current session*/
+        value->n_packets += 1;
+        value->n_bytes += pkt_len;
+        value->alive_timestamp = curr_time;
+        pcn_log(ctx, LOG_DEBUG, "UDP Session updated with normal key");
         break;
       }
 
-      /*Check if the entry was too old => overwrite it*/
-      if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-        pcn_log(ctx, LOG_DEBUG, "EGRESS - UDP Session overwritten");
-        uint8_t method;
-        __be32 server = heuristic_server_udp(ip, udp, &method);
-        update_expired_session(server, curr_time, pkt_len, server==ip->saddr, &key, method);
+      /*Check if match reverse key*/
+      struct session_key reverse_key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
+      value = SESSIONS_TRACKED_CRYPTO.lookup(&reverse_key);
+      if (value) {
+        /*Update current session*/
+        value->n_packets_reverse += 1;
+        value->n_bytes_reverse += pkt_len;
+        value->alive_timestamp = curr_time;
+        pcn_log(ctx, LOG_DEBUG, "UDP Session updated with normal key");
         break;
       } 
 
-      /*Update current session*/
-      update_session(value, pkt_len, curr_time, value->server_ip==ip->saddr);
-      pcn_log(ctx, LOG_DEBUG, "EGRESS - UDP Session updated");
+      /*Insert new one with normal key*/
+      pcn_log(ctx, LOG_DEBUG, "UDP New session");
+      uint32_t method;
+      __be32 server = heuristic_server_udp(ip, udp, &method);
+      struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
+      SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
       break;
     }
     /*Ignored protocol*/

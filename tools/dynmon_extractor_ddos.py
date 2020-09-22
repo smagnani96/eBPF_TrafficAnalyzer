@@ -3,12 +3,12 @@
 
 import time, threading, argparse, requests, json, socket, os
 
-VERSION 					= '0.9'
+VERSION 					= '1.0'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT 				= 9000
-REQUESTS_TIMEOUT 			= 200
+REQUESTS_TIMEOUT 			= 300
 OUTPUT_DIR 					= 'dump_ddos'
-INTERVAL 					= 1   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
+INTERVAL 					= 10   		 	# seconds to wait before retrieving again the features, to have less just insert a decimal number like 0.01
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP"), (1, "ICMP")])
 
@@ -31,7 +31,7 @@ def main():
 
 	checkIfOutputDirExists(output_dir)
 
-	dynmonConsume(cube_name, output_dir, interval, is_json)
+	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, is_json)).start()
 
 
 def dynmonConsume(cube_name, output_dir, interval, is_json):
@@ -41,7 +41,7 @@ def dynmonConsume(cube_name, output_dir, interval, is_json):
 	counter += 1
 	
 	start_time = time.time()
-	metric =  getMetric(cube_name)
+	metric =  getMetrics(cube_name)['ingress-metrics'][0]['value']
 	req_time = time.time()
 
 	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, is_json)).start()
@@ -54,35 +54,26 @@ def dynmonConsume(cube_name, output_dir, interval, is_json):
 	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(metric)}')
 
 
-def parseAndStoreJson(entries, output_dir, counter):
-	data = []
+def parseAndStoreJson(entries, output_dir, my_count):
 	flows = {}
+	
 	for entry in entries:
 		sid = entry['id']
-		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
 		seconds = entry['timestamp'] // 1000000000
 		nanoseconds = int(str(entry['timestamp'])[-9:])
 		features = [seconds, nanoseconds]
 		for key, value in entry.items():
-			if key != 'id' and key != 'timestamp': features.append(value)
+			if key != 'id' and key != 'timestamp' and key != 'server_ip': features.append(value)
 		
+		flowIdentifier = () 
+		if entry['server_ip'] == sid['daddr']: flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		else : flowIdentifier = (sid['daddr'], sid['dport'], sid['saddr'], sid['sport'], sid['proto'])
+
 		if flowIdentifier in flows: flows[flowIdentifier].append(features)
 		else: flows[flowIdentifier] = [features]
 
-	'''
-	NOW YOU HAVE `flows` THAT IS A DICTIONARY DATA STRUCTURE:
-	{
-		(srcIp_big_endian,...) : [{
-				"seconds": x,
-				"nanoseconds": y,
-				...
-			},
-			...
-		]
-		...
-	}
-	WHERE EVERY ELEMENT OF THE ARRAYS CORRESPOND TO A SINGLE PACKET (IF YOU READ ALL THE COLUMS AT ONCE YOU GET THE PACKET FEATURES).
-	'''
+	# used to convert flows identifier
+	data = []
 	for key, value in flows.items():
 		parsed_key = (
 			socket.inet_ntoa(key[0].to_bytes(4, 'little')),
@@ -93,27 +84,22 @@ def parseAndStoreJson(entries, output_dir, counter):
 		)
 		data.append({"id": parsed_key, "packets": value})
 
-	'''
-	NOW YOU HAVE `data` which is the json-like object to be printed, retrieved from `flows`:
-	{
-		"id": [srcIp, dstIp, srcPort, dstPort, proto],
-		"packets": [...]
-	}
-
-	THE FOLLOWING CODE PRINTS THE VALUES TO FILE. REMOVE THEM AND INSERT YOUR INTERACTIONS IN THE FINAL VERSION.
-	'''
-	with open(f'{output_dir}/result_{counter}.json', 'w') as fp:
+	# print data to file (SUBSTITUTE HERE YOUR CODE)
+	with open(f'{output_dir}/result_{my_count}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
 
 
-def parseAndStore(entries, output_dir, counter):
+def parseAndStore(entries, output_dir, my_count):
 	flows = {}
 	for entry in entries:
 		seconds = entry['timestamp'] // 1000000000
 		nanoseconds = str(entry['timestamp'])[-9:]
 		sid = entry['id']
-		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		flowIdentifier = ()
 		
+		if entry['server_ip'] == sid['daddr']: flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		else : flowIdentifier = (sid['daddr'], sid['dport'], sid['saddr'], sid['sport'], sid['proto'])
+
 		if flowIdentifier in flows:
 			flows[flowIdentifier]['seconds'].append(seconds)
 			flows[flowIdentifier]['nanoseconds'].append(nanoseconds)
@@ -138,20 +124,9 @@ def parseAndStore(entries, output_dir, counter):
 				'udpSize':		[entry['udpSize']],
 				'icmpType':		[entry['icmpType']]
 			}
-
-	'''
-	NOW YOU HAVE `flows` THAT IS A DICTIONARY DATA STRUCTURE optimized for printing csv:
-	{
-		(src_ip_big_endian, ...) : {
-			"seconds": [...],
-			"nanoseconds": [...],
-			...
-		},
-		...
-	}
-	WHERE EVERY ELEMENT OF THE ARRAYS CORRESPOND TO A SINGLE PACKET (IF YOU READ ALL THE COLUMS AT ONCE YOU GET THE PACKET FEATURES).
-	'''
-
+	# flows now is a json with key the session ID, and as value each feature as array, optimized for printing csv
+	
+	# foreach entry print to a different file
 	for key, value in flows.items():
 		parsed_key = (
 			socket.inet_ntoa(key[0].to_bytes(4, 'little')),
@@ -160,10 +135,7 @@ def parseAndStore(entries, output_dir, counter):
 			socket.ntohs(key[3]),
 			protocol_map[key[4]]
 		)
-		'''
-		THE FOLLOWING CODE PRINTS THE VALUES TO FILE. REMOVE THEM AND INSERT YOUR INTERACTIONS IN THE FINAL VERSION.
-		'''
-		with open(f"{output_dir}/{parsed_key[0]}-{parsed_key[1]}___{parsed_key[2]}-{parsed_key[3]}___{parsed_key[4]}-iter{counter}.csv", 'w') as fp:
+		with open(f"{output_dir}/{parsed_key[0]}-{parsed_key[1]}___{parsed_key[2]}-{parsed_key[3]}___{parsed_key[4]}-iter{my_count}.csv", 'w') as fp:
 			fp.write(""
 				f"Seconds     ,\t{', '.join(map(str,value['seconds']))}\n"
 				f"Ns          ,\t{', '.join(map(str,value['nanoseconds']))}\n"
@@ -188,9 +160,9 @@ def checkIfOutputDirExists(output_dir):
 		print (f"Successfully created the directory {output_dir}")
 
 
-def getMetric(cube_name):
+def getMetrics(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/PACKET_BUFFER_DDOS/value', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)
