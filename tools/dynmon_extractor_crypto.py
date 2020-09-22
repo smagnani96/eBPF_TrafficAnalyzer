@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-import time, threading, argparse, requests, json, socket, os
+import time, threading, argparse, requests, json, socket, os, copy
 
 VERSION = '1.0'
 FILENAME 					= 'results.csv'
@@ -16,7 +16,7 @@ counter 					= 0
 protocol_map 				= dict(			# map protocol integer value to name
 	[(6, "TCP"), (17, "UDP")])
 empty_feature 				= dict(
-	[('n_packets_server',0), ('n_packets_client',0), ('n_bytes_server',0), ('n_bytes_client',0), ('start_timestamp',0), ('alive_timestamp',0), ('method',0), ('server_ip',0)])
+	[('n_packets',0), ('n_packets_reverse',0), ('n_bytes',0), ('n_bytes_reverse',0), ('start_timestamp',0), ('alive_timestamp',0), ('method',0), ('server_ip',0)])
 
 
 def main():
@@ -65,52 +65,47 @@ def dynmonConsume(cube_name, interval, interval_ns, is_json, output_dir):
 	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metric: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tMetric parsed: {len(metric)}')
 
 
-def sumCPUValues(values, ingress_src):
-	ret = empty_feature
+def sumCPUValues(values, key):
+	ret = copy.copy(empty_feature)
+	#summing each cpu values
 	for value in values:
-		if value['server_ip'] == 0:
-			continue
-		ret['server_ip'] = value['server_ip']
-		if value['server_ip'] == ingress_src:
-			ret['n_packets_server'] += value['n_packets']
-			ret['n_packets_client'] += value['n_packets_reverse']
-			ret['n_bytes_server'] += value['n_bytes']
-			ret['n_bytes_client'] += value['n_bytes_reverse']
-		else:
-			ret['n_packets_server'] += value['n_packets_reverse']
-			ret['n_packets_client'] += value['n_packets']
-			ret['n_bytes_server'] += value['n_bytes_reverse']
-			ret['n_bytes_client'] += value['n_bytes']
-		if value['alive_timestamp'] > ret['alive_timestamp']:
-			ret['alive_timestamp'] = value['alive_timestamp']
-			ret['start_timestamp'] = value['start_timestamp']
-			ret['method'] = value['method']
+		ret['n_packets'] += value['n_packets']
+		ret['n_packets_reverse'] += value['n_packets_reverse']
+		ret['n_bytes'] += value['n_bytes']
+		ret['n_bytes_reverse'] += value['n_bytes_reverse']
+		if value['server_ip'] != 0: ret['server_ip'] = value['server_ip']
+		if value['alive_timestamp'] > ret['alive_timestamp']: ret['alive_timestamp'] = value['alive_timestamp']
+		if value['method'] != 0: ret['method'] = value['method']
+	#modifying fields according to client-server and parsing Identifiers
+	if value['server_ip'] == key['saddr']:
+		ret['n_packets_client'] = ret.pop('n_packets_reverse')
+		ret['n_packets_server'] = ret.pop('n_packets')
+		ret['n_bytes_client'] = ret.pop('n_bytes_reverse')
+		ret['n_bytes_server'] = ret.pop('n_bytes')
+		ret['id'] = (
+				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
+				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
+				socket.ntohs(key['dport']),
+				socket.ntohs(key['sport']),
+				protocol_map[key['proto']])
+	else:
+		ret['n_packets_client'] = ret.pop('n_packets')
+		ret['n_packets_server'] = ret.pop('n_packets_reverse')
+		ret['n_bytes_client'] = ret.pop('n_bytes')
+		ret['n_bytes_server'] = ret.pop('n_bytes_reverse')
+		ret['id'] = (
+				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
+				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
+				socket.ntohs(key['sport']),
+				socket.ntohs(key['dport']),
+				protocol_map[key['proto']])
 	return ret
 
 
 def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 	data = []
 	for entry in metric:
-		key = entry['key']
-		value = sumCPUValues(entry['value'], key['saddr'])
-
-		if value['server_ip'] == 0:
-			continue
-
-		if value['server_ip'] == key['saddr']:
-			connIdentifier = (
-				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
-				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
-				socket.ntohs(key['dport']),
-				socket.ntohs(key['sport']),
-				protocol_map[key['proto']])
-		else:
-			connIdentifier = (
-				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
-				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
-				socket.ntohs(key['sport']),
-				socket.ntohs(key['dport']),
-				protocol_map[key['proto']])
+		value = sumCPUValues(entry['value'], entry['key'])
 
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
@@ -122,28 +117,10 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 			n_bits_server, n_bits_client, duration, makeDivision(n_packets_server,seconds), makeDivision(n_packets_client,seconds),
 			makeDivision(n_bits_server,seconds), makeDivision(n_bits_client,seconds), makeDivision(n_bits_server,n_packets_server),
 			makeDivision(n_bits_client,n_packets_client), makeDivision(n_packets_server,n_packets_client), makeDivision(n_bits_server,n_bits_client)]
-		data.append({"id": connIdentifier, "value": values})
+		data.append({"id": value['id'], "value": values})
 
-	
-	if not data:
-		print('(All entries have already been parsed)')
-		return
-
-	'''
-	data is a list of session identifiers-features
-	
-	@@@REPLACE THE FOLLOWING CODE (output to file) with your ML direct interaction@@@
-	
-	**Note**:
-		the `value` field inside each element of the `data` array is an array of the requested features, but IT IS NOT A JSON. So if you want to access
-		the feature "timestamp" it is not possible to do -> data[0]['value']['timestamp'] but data[0]['value'][0]
-		Otherwise, instead of creating on line 95 the array `values` create a json object like:
-		{
-			"timestamp": xxxxx,
-			"ip_src": yyyyy,
-			etc.
-		}
-	'''
+	#data is a list of session identifiers-features
+	#REPLACE THE FOLLOWING CODE (output to file) with your ML direct interaction@@@
 	with open(f'{output_dir}/result_{my_count}.json', 'w') as fp:
 		json.dump(data, fp, indent=2)
 
@@ -151,26 +128,7 @@ def parseAndStoreJson(metric, last_check_time, my_count, output_dir, curr_time):
 def parseAndStore(metric, last_check_time, output_dir, curr_time):
 	fp = open(f"{output_dir}/{FILENAME}", 'a')
 	for entry in metric:
-		key = entry['key']
-		value = sumCPUValues(entry['value'], key['saddr'])
-
-		if value['server_ip'] == 0:
-			continue
-		
-		if value['server_ip'] == key['saddr']:
-			connIdentifier = (
-				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
-				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
-				socket.ntohs(key['dport']),
-				socket.ntohs(key['sport']),
-				protocol_map[key['proto']])
-		else:
-			connIdentifier = (
-				socket.inet_ntoa(int(key['saddr']).to_bytes(4, "little")),
-				socket.inet_ntoa(int(key['daddr']).to_bytes(4, "little")),
-				socket.ntohs(key['sport']),
-				socket.ntohs(key['dport']),
-				protocol_map[key['proto']])
+		value = sumCPUValues(entry['value'], entry['key'])
 		
 		n_packets_client = value['n_packets_client']
 		n_packets_server = value['n_packets_server']
@@ -178,7 +136,7 @@ def parseAndStore(metric, last_check_time, output_dir, curr_time):
 		n_bits_client = value['n_bytes_client']*8
 		duration = value['alive_timestamp'] - value['start_timestamp']
 		seconds = duration / 1000000000
-		fp.write(f"{value['alive_timestamp']}, {', '.join(map(str, connIdentifier))}, {value['method']}, {n_packets_server}, {n_packets_client}, "
+		fp.write(f"{value['alive_timestamp']}, {', '.join(map(str, value['id']))}, {value['method']}, {n_packets_server}, {n_packets_client}, "
 			f"{n_bits_server}, {n_bits_client}, {duration}, {makeDivision(n_packets_server,seconds)}, {makeDivision(n_packets_client,seconds)}, "
 			f"{makeDivision(n_bits_server,seconds)}, {makeDivision(n_bits_client,seconds)}, {makeDivision(n_bits_server,n_packets_server)}, "
 			f"{makeDivision(n_bits_client,n_packets_client)}, {makeDivision(n_packets_server,n_packets_client)}, {makeDivision(n_bits_server,n_bits_client)}\n")

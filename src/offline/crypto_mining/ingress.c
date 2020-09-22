@@ -14,7 +14,6 @@
 
 /* Number of max TCP session tracked */
 #define N_SESSION 10000
-#define SESSION_DROP_AFTER_TIME 30000000000
 
 /*Features to be exported*/
 struct features {
@@ -202,15 +201,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
       if (value) {
         pcn_log(ctx, LOG_DEBUG, "TCP matched normal key");
-        /*Check if the entry was too old => overwrite it*/
-        if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-          pcn_log(ctx, LOG_DEBUG, "TCP Session overwritten with normal key");
-          uint32_t method;
-          __be32 server = heuristic_server_tcp(ip, tcp, &method);
-          struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-          SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
-          break;
-        } 
         /*Update current session*/
         value->n_packets += 1;
         value->n_bytes += pkt_len;
@@ -224,15 +214,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
  
       if(value) {
         pcn_log(ctx, LOG_DEBUG, "TCP matched reverse_key");
-        /*Check if the entry was too old => overwrite it*/
-        if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-          pcn_log(ctx, LOG_DEBUG, "TCP Session overwritten with reverse_key");
-          uint32_t method;
-          __be32 server = heuristic_server_tcp(ip, tcp, &method);
-          struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-          SESSIONS_TRACKED_CRYPTO.update(&reverse_key, &new_val);
-          break;
-        } 
         /*Update current session*/
         value->n_packets_reverse += 1;
         value->n_bytes_reverse += pkt_len;
@@ -263,15 +244,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       /*Check if match normal key*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
       if (value) {
-        /*Check if the entry was too old => overwrite it*/
-        if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-          pcn_log(ctx, LOG_DEBUG, "UDP Session overwritten with normal key");
-          uint32_t method;
-          __be32 server = heuristic_server_udp(ip, udp, &method);
-          struct features new_val = {.n_packets=1, .n_bytes=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-          SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
-          break;
-        }
         /*Update current session*/
         value->n_packets += 1;
         value->n_bytes += pkt_len;
@@ -284,15 +256,6 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       struct session_key reverse_key = {.saddr=ip->daddr, .daddr= ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
       value = SESSIONS_TRACKED_CRYPTO.lookup(&reverse_key);
       if (value) {
-        /*Check if the entry was too old => overwrite it*/
-        if(curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
-          pcn_log(ctx, LOG_DEBUG, "UDP Session overwritten with reverse_key");
-          uint32_t method;
-          __be32 server = heuristic_server_udp(ip, udp, &method);
-          struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};  
-          SESSIONS_TRACKED_CRYPTO.update(&reverse_key, &new_val);
-          break;
-        }
         /*Update current session*/
         value->n_packets_reverse += 1;
         value->n_bytes_reverse += pkt_len;

@@ -41,20 +41,17 @@ def dynmonConsume(cube_name, output_dir, interval, is_json):
 	counter += 1
 	
 	start_time = time.time()
-	metrics =  getMetrics(cube_name)
+	metric =  getMetrics(cube_name)['ingress-metrics'][0]['value']
 	req_time = time.time()
 
 	threading.Timer(interval, dynmonConsume, (cube_name, output_dir, interval, is_json)).start()
 
-	packets  = metrics[0]['value'] if len(metrics) == 3 and 'value' in metrics[0] and metrics[0]['value'] is not None else []
-	sessions = metrics[1]['value'] if len(metrics) == 3 and 'value' in metrics[1] and metrics[1]['value'] is not None else []
-
-	if not packets or not sessions:
+	if not metric:
 		print(f'Got nothing ...\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)')
 		return
 
-	parseAndStore(packets, output_dir, my_count) if is_json is False	else parseAndStoreJson(packets, output_dir, my_count)
-	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(packets)}')
+	parseAndStore(metric, output_dir, my_count) if is_json is False	else parseAndStoreJson(metric, output_dir, my_count)
+	print(f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(metric)}')
 
 
 def parseAndStoreJson(entries, output_dir, my_count):
@@ -66,9 +63,12 @@ def parseAndStoreJson(entries, output_dir, my_count):
 		nanoseconds = int(str(entry['timestamp'])[-9:])
 		features = [seconds, nanoseconds]
 		for key, value in entry.items():
-			if key != 'id' and key != 'timestamp': features.append(value)
+			if key != 'id' and key != 'timestamp' and key != 'server_ip': features.append(value)
 		
-		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		flowIdentifier = () 
+		if entry['server_ip'] == sid['daddr']: flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		else : flowIdentifier = (sid['daddr'], sid['dport'], sid['saddr'], sid['sport'], sid['proto'])
+
 		if flowIdentifier in flows: flows[flowIdentifier].append(features)
 		else: flows[flowIdentifier] = [features]
 
@@ -95,8 +95,11 @@ def parseAndStore(entries, output_dir, my_count):
 		seconds = entry['timestamp'] // 1000000000
 		nanoseconds = str(entry['timestamp'])[-9:]
 		sid = entry['id']
-		flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		flowIdentifier = ()
 		
+		if entry['server_ip'] == sid['daddr']: flowIdentifier = (sid['saddr'], sid['sport'], sid['daddr'], sid['dport'], sid['proto'])
+		else : flowIdentifier = (sid['daddr'], sid['dport'], sid['saddr'], sid['sport'], sid['proto'])
+
 		if flowIdentifier in flows:
 			flows[flowIdentifier]['seconds'].append(seconds)
 			flows[flowIdentifier]['nanoseconds'].append(nanoseconds)
@@ -159,7 +162,7 @@ def checkIfOutputDirExists(output_dir):
 
 def getMetrics(cube_name):
 	try:
-		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/ingress-metrics/', timeout=REQUESTS_TIMEOUT)
+		response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}/metrics/', timeout=REQUESTS_TIMEOUT)
 		if response.status_code == 500:
 			print(response.content)
 			exit(1)

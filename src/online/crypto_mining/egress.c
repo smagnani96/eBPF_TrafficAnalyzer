@@ -14,7 +14,6 @@
 
 /* Number of max TCP session tracked */
 #define N_SESSION 10000
-#define SESSION_DROP_AFTER_TIME 30000000000
 
 /*Features to be exported*/
 struct features {
@@ -201,11 +200,11 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Check if match*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
-      if (!value || curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
+      if (!value) {
         uint32_t method;
         __be32 server = heuristic_server_tcp(ip, tcp, &method);
         struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};
-        SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
+        SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
         return RX_OK;
       }
       
@@ -230,11 +229,11 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
 
       /*Check if match*/
       struct features *value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
-      if (!value || curr_time - value->alive_timestamp > SESSION_DROP_AFTER_TIME) {
+      if (!value) {
         uint32_t method;
         __be32 server = heuristic_server_udp(ip, udp, &method);
         struct features new_val = {.n_packets_reverse=1, .n_bytes_reverse=pkt_len, .start_timestamp=curr_time, .alive_timestamp=curr_time, .server_ip=server, .method=method};
-        SESSIONS_TRACKED_CRYPTO.update(&key, &new_val);
+        SESSIONS_TRACKED_CRYPTO.insert(&key, &new_val);
         return RX_OK;
       }
       
