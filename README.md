@@ -111,7 +111,7 @@ You can also tell Dynmon to erase the map after the read. Dynmon automatically u
 * OS: Ubuntu >= 18.04 (20.04 works fine)
 * Kernel: 5.7.0 (also 5.4.0-33-generic is good, but map extraction can be slower due to some features missing)
 * Disk space: >= 210 MB (Polycube Docker) + needed space for output files
-* Memory: >= 100MB + X (where X is the size of the used BPF_MAP depending on parameters like: N°Sessions, N°Packets_per_session,...)
+* Memory: >= 100MB + X + Y*CPU_cores (where X is the size of the used BPF_MAP for DDoS detection, and Y the size of the BPF_MAP in the Crypto-Mining scenario)
 
 ### OS installation
 
@@ -149,11 +149,11 @@ The script [setup_environment.sh](./setup_environment.sh) manages and launches e
 This file has an important parameter, the `online` variable, which is used to decide which infrastructure to be deployed. By default it is deployed the following architecture, where the device running the probes is not in between the communication, but all the traffic is copied to it.
 
 ```bash
-      |A|                                            +-----------+   
-       |        +----+----------------+--------------+           |   
-       +--------| fw | monitor_crypto | monitor_ddos | Interface |-----|Offline_device|
-       |        +----+----------------+--------------+  wlp59s0  |   
-      |B|                                            +-----------+  
+      |A|                                       +-----------+   
+       |        -----------------+--------------+           |   
+       +--------| monitor_crypto | monitor_ddos | Interface |-----|Offline_device|
+       |        -----------------+--------------+  wlp59s0  |   
+      |B|                                       +-----------+  
 ```
 
 On the other hand, with the `online=1` parameter, the deployed architecture requires the device running the probes to be in between of the communication or in one of the two endpoints inferfaces, as follows.
