@@ -138,7 +138,7 @@ static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcph
 
   *method = 3;
   /*Otherwise, the lowest port is the server*/
-  return dst_port < src_port ? ip->daddr : ip->saddr;
+  return dst_port <= src_port ? ip->daddr : ip->saddr;
 }
 
 static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp, uint32_t *method) {
@@ -158,7 +158,7 @@ static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udph
 
   *method = 3;
   /*Otherwise, the lowest port is the server*/
-  return dst_port < src_port ? ip->daddr : ip->saddr;
+  return dst_port <= src_port ? ip->daddr : ip->saddr;
 }
 
 static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *md) {

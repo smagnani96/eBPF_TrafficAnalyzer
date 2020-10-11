@@ -4,7 +4,6 @@
 import argparse
 import json
 
-VERSION = '0.9'
 
 def main():
 	args = parseArguments()
@@ -14,7 +13,8 @@ def main():
 
 
 def showVersion():
-    return '%(prog)s - Version ' + VERSION
+    with open('../VERSION', 'r') as fp:
+        return '%(prog)s - Version ' + fp.readline()
 
 
 def parseArguments():

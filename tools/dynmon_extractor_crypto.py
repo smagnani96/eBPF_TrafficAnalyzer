@@ -3,7 +3,6 @@
 
 import time, threading, argparse, requests, json, socket, os, copy
 
-VERSION = '1.0'
 FILENAME 					= 'results.csv'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT				= 9000
@@ -76,7 +75,7 @@ def sumCPUValues(values, key):
 		if value['alive_timestamp'] > ret['alive_timestamp']: ret['alive_timestamp'] = value['alive_timestamp']
 		if value['method'] != 0: ret['method'] = value['method']
 	#modifying fields according to client-server and parsing Identifiers
-	if value['server_ip'] == key['saddr']:
+	if ret['server_ip'] == key['saddr']:
 		ret['n_packets_client'] = ret.pop('n_packets_reverse')
 		ret['n_packets_server'] = ret.pop('n_packets')
 		ret['n_bytes_client'] = ret.pop('n_bytes_reverse')
@@ -112,11 +111,11 @@ def parseAndStoreJson(metric, my_count, output_dir, curr_time):
 		n_bits_client = value['n_bytes_client']*8
 		duration = value['alive_timestamp'] - value['start_timestamp']
 		seconds = duration / 1000000000
-		values = [value['alive_timestamp'], value['method'], n_packets_server, n_packets_client,
+		features = [value['alive_timestamp'], value['method'], n_packets_server, n_packets_client,
 			n_bits_server, n_bits_client, duration, makeDivision(n_packets_server,seconds), makeDivision(n_packets_client,seconds),
 			makeDivision(n_bits_server,seconds), makeDivision(n_bits_client,seconds), makeDivision(n_bits_server,n_packets_server),
 			makeDivision(n_bits_client,n_packets_client), makeDivision(n_packets_server,n_packets_client), makeDivision(n_bits_server,n_bits_client)]
-		data.append({"id": value['id'], "value": values})
+		data.append({"id": value['id'], "value": features})
 
 	#data is a list of session identifiers-features
 	#REPLACE THE FOLLOWING CODE (output to file) with your ML direct interaction@@@
@@ -179,7 +178,8 @@ def checkIfOutputDirExists(output_dir):
 
 
 def showVersion():
-    return '%(prog)s - Version ' + VERSION
+	with open('../VERSION', 'r') as fp:
+		return '%(prog)s - Version ' + fp.readline()
 
 
 def parseArguments():

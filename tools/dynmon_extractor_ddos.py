@@ -3,7 +3,6 @@
 
 import time, threading, argparse, requests, json, socket, os
 
-VERSION 					= '1.0'
 POLYCUBED_ADDR 				= 'localhost'
 POLYCUBED_PORT 				= 9000
 REQUESTS_TIMEOUT 			= 300
@@ -182,7 +181,8 @@ def getMetrics(cube_name):
 
 
 def showVersion():
-    return '%(prog)s - Version ' + VERSION
+	with open('../VERSION', 'r') as fp:
+		return '%(prog)s - Version ' + fp.readline()
 
 
 def parseArguments():

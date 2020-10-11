@@ -8,7 +8,6 @@ import json
 import os.path
 from os import path
 
-VERSION = '0.9'
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
 REQUESTS_TIMEOUT = 5 #seconds
@@ -124,6 +123,10 @@ def attach_to_interface(cube_name, interface):
         exit(1)
 
 
+def showVersion():
+    with open('../VERSION', 'r') as fp:
+        return '%(prog)s - Version ' + fp.readline()
+
 def parseArguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('cube_name', help='indicates the name of the cube', type=str)
@@ -132,10 +135,6 @@ def parseArguments():
     parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
     parser.add_argument('-v', '--version', action='version', version=showVersion())
     return parser.parse_args().__dict__
-
-
-def showVersion():
-    return '%(prog)s - Version ' + VERSION
 
 
 if __name__ == '__main__':
