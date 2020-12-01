@@ -15,7 +15,7 @@
 #define IPPROTO_ICMP 1
 
 /*Own control variables*/
-#define N_SESSION                   100             // Number of max TCP session tracked
+#define N_SESSION                   1024            // Number of max TCP session tracked
 #define N_PACKET_PER_SESSION        100             // Number of packet from the same TCP session
 #define N_PACKET_TOTAL \
     N_SESSION * N_PACKET_PER_SESSION                // Number of max packet captured (Size of PACKET_BUFFER)
