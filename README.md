@@ -79,7 +79,7 @@ The methods to heuristically find out which is the server are the following:
 ## Infrastructure Architecture
 
 Thanks to the [Dynmon](https://polycube-network.readthedocs.io/en/latest/services/pcn-dynmon/dynmon.html) service recently integrated in the framework, users
-are able to inject dynamically new eBPB code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
+are able to inject dynamically new eBPF code to be inserted in the Data Plane. This code is managed by a Monitor, which needs to be created and attached to a network interface.
 
 Using the [dymon\_injector.py](./tools/dynmon_injector.py) script a user inject the new code into the probe. From that moment on, by querying the correct monitor the user can retrieve all the informations it has gathered. But what information? Those we tell the probe to gather. In all the `dataplane.json` files, users not only insert their own code, but they also specify which metrics should be exported by the service.
 
@@ -88,7 +88,7 @@ The injectable code should be formatted and escaped accordingly to JSON format. 
 To extract the metrics from the monitor, I created apposite scripts which contact Polycube via REST APIs.
 These scripts are:
 
-* [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py)
+* [dynmon\_extractor\_crypto.py](./tools/dynmon_extractor_crypto.py)
 * [dynmon\_extractor\_ddos.py](./tools/dynmon_extractor_ddos.py)
 
 I recently integrated in Dynmon two vital features for this project:
