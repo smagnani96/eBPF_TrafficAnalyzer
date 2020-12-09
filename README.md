@@ -8,7 +8,7 @@ Tutorial: https://drive.google.com/file/d/1udg_jhvMqHZJMNc2nm63liXwkENiONpp/view
 
 ## DDos detection
 
-This section covers the [online_ddos](./src/online/ddos\_detection) and [offline_ddos](./src/offline/ddos\_detection) programs related to DDos detection.
+This section covers the [ddos](./src/ddos\_detection) program related to DDos detection.
 
 The following parameters are vital:
 
@@ -32,8 +32,6 @@ The packets are stored in a Queue, meaning that they are automatically deleted w
 
 Reading the required features does not lock the map for the dataplane, which can continue monitoring incoming packets. This is thanks to an advance swap feature, which allow me to swap the required metric with a new appositely created one, letting the user completely unaware of what is going on.
 
-While for the "online" scenario these actions are performed both in the *INGRESS* and *EGRESS* data path using shared maps, the "offline" scenario covers all the use cases where the entire traffic (client and server) is reaching the interface of interest, but never leaving it (e.g., using tcpreplay). The latter case implements more controls to check whether a specific connection is being tracked with the reversed identifier.
-
 The map content will later be read and unified using the [dynmon_extractor_ddos.py](./tools/dynmon_extractor_ddos.py) script.
 
 The methods to heuristically find out which is the server are the following:
@@ -45,7 +43,7 @@ The methods to heuristically find out which is the server are the following:
 
 ## Crypto mining
 
-This section covers the [online_crypto_mining](./src/online/crypto\_mining) and [offline_crypto_mining](./src/offline/crypto\_mining) programs related to Crypto Mining detection.
+This section covers the [crypto_mining](./src/crypto\_mining) program related to Crypto Mining detection.
 
 The only vital parameters is *N_SESSION*, which represents the max number of sessions tracked.
 
@@ -212,29 +210,31 @@ The following scripts create a Dynmon instance with the specified configuration 
 
 It automatically contacts Polycube at `localhost:9000` which, if you followed the previous sections, should be forwaded to the docker container where Polycube is actually running.
 
+If you want to run the program in the offline mode, you should add the parameter `-t ingress` to the following commands.
+
 #### DDos
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/online/ddos_detection/dataplane.json
+./dynmon_injector.py monitor wlp59s0  ../src/ddos_detection/dataplane.json
 ```
 
 or
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/offline/ddos_detection/dataplane.json
+./dynmon_injector.py monitor wlp59s0  ../src/ddos_detection/dataplane.json
 ```
 
 
 #### Crypto
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/online/crypto_mining/dataplane.json
+./dynmon_injector.py monitor wlp59s0  ../src/crypto_mining/dataplane.json
 ```
 
 or
 
 ```bash
-./dynmon_injector.py monitor wlp59s0  ../src/offline/crypto_mining/dataplane.json
+./dynmon_injector.py monitor wlp59s0  ../src/crypto_mining/dataplane.json
 ```
 
 ### Loading Firewall
@@ -336,7 +336,7 @@ All done :)
 
 ## General Usage
 
-Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my `dataplane.json` examples, both for the online and offline scenario.
+Let's analyze step by step every operation needed to make the system work. If you are not willing to write new code, please go to Step2 and use my `dataplane.json` examples.
 
 No need to tell that if you are going to use this project with Polycube, a running `polycubed` daemon is needed to accomplish every interaction.
 
