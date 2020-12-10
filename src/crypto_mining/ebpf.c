@@ -207,9 +207,11 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         uint32_t method;
         uint32_t server_ip = heuristic_server(ip->saddr, ip->daddr, tcp->source, tcp->dest, &method, tcp);
         struct features zero = {.start_timestamp=curr_time, .method=method, .server_ip=server_ip};
-        do_update(&zero, bpf_ntohs(ip->tot_len), curr_time, ip->saddr == key.saddr);
         SESSIONS_TRACKED_CRYPTO.insert(&key, &zero);
-        break;
+        value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
+        if (!value) {
+          return RX_OK;
+        }
       }
 
       /*Update current session*/
@@ -232,9 +234,11 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
         uint32_t method;
         uint32_t server_ip = heuristic_server(ip->saddr, ip->daddr, udp->source, udp->dest, &method, NULL);
         struct features zero = {.start_timestamp=curr_time, .method=method, .server_ip=server_ip};
-        do_update(&zero, bpf_ntohs(ip->tot_len), curr_time, ip->saddr == key.saddr);
         SESSIONS_TRACKED_CRYPTO.insert(&key, &zero);
-        break;
+        value = SESSIONS_TRACKED_CRYPTO.lookup(&key);
+        if (!value) {
+          return RX_OK;
+        }
       }
 
       /*Update current session*/

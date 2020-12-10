@@ -66,7 +66,7 @@ def dynmonConsume(cube_name, output_dir, interval, is_json):
     parseAndStoreJson(packets, sessions_map, output_dir, my_count) if is_json else parseAndStore(
         packets, sessions_map, output_dir, my_count)
     print(
-        f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(packets)}')
+        f'Got something!\n\tExecution n°: {my_count}\n\tTime to retrieve metrics: {req_time - start_time} (s)\n\tTime to parse: {time.time() - req_time} (s)\n\tPacket parsed: {len(packets)}\n\tSessions: {len(sessions_map)}')
 
 
 def parseAndStoreJson(packets, sessions, output_dir, my_count):
