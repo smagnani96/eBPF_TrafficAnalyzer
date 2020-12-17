@@ -10,7 +10,7 @@ from os import path
 
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
-REQUESTS_TIMEOUT = 5  # seconds
+REQUESTS_TIMEOUT = 20  # seconds
 MODE = 'TC'
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
@@ -69,8 +69,6 @@ def createInstance(cube_name, debug, mode):
     try:
         print(f'Creating new Firewall instance named {cube_name}')
         response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}',
-                                 timeout=REQUESTS_TIMEOUT)
-        response = requests.post(f'{polycubed_endpoint}/dynmon/{cube_name}',
                                  json.dumps({
                                      'type': mode,
                                      'loglevel': 'debug' if debug is True else 'OFF'}),
