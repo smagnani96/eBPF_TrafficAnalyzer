@@ -10,7 +10,7 @@ from os import path
 
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
-REQUESTS_TIMEOUT = 5 #seconds
+REQUESTS_TIMEOUT = 5  # seconds
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 
@@ -33,11 +33,13 @@ def main():
         ingress = getRules(cube_name, "INGRESS")
         egress = getRules(cube_name, "EGRESS")
         print(f'Ingress rules:')
-        for x in ingress: print(f'\t{json.dumps(x)}')
+        for x in ingress:
+            print(f'\t{json.dumps(x)}')
         print(f'Egress rules:')
-        for x in egress: print(f'\t{json.dumps(x)}')
+        for x in egress:
+            print(f'\t{json.dumps(x)}')
         return
-    
+
     rules = None
     '''
     Here the rules are loaded from a JSON file, feel free to create the payload of the POST request directly here.
@@ -58,25 +60,27 @@ def main():
 
     with open(rule_file) as fp:
         rules = json.load(fp)
-    
+
     if rules is None:
         print('An error occurred reading the JSON file')
         return
-    
+
     injectRules(cube_name, rules, chain)
     print('All done :)')
 
 
 def injectRules(cube_name, rules, chain):
     try:
-        response = requests.post(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/batch', timeout=REQUESTS_TIMEOUT, json=rules)
+        response = requests.post(
+            f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/batch', timeout=REQUESTS_TIMEOUT, json=rules)
         if response.status_code == 500:
             print(response.content)
             return
         response.raise_for_status()
         print(f'Rule correctly injected')
     except requests.exceptions.HTTPError:
-        print(f'Unable to inject rule {rule}\n\tError -> {response.status_code}\n\tWhat -> {response.content}')
+        print(
+            f'Unable to inject rule {rule}\n\tError -> {response.status_code}\n\tWhat -> {response.content}')
     except requests.exceptions.ConnectionError:
         print('Connection error: unable to connect to polycube daemon.')
         exit(1)
@@ -93,7 +97,8 @@ def injectRules(cube_name, rules, chain):
 
 def getRules(cube_name, chain):
     try:
-        response = requests.get(f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/rule', timeout=REQUESTS_TIMEOUT)
+        response = requests.get(
+            f'{polycubed_endpoint}/firewall/{cube_name}/chain/{chain}/rule', timeout=REQUESTS_TIMEOUT)
         if response.status_code == 500:
             print(response.content)
             exit(1)
@@ -109,23 +114,31 @@ def getRules(cube_name, chain):
         exit(1)
     except requests.exceptions.RequestException:
         print('Error: unable to connect to polycube daemon.')
-        exit(1) 
+        exit(1)
 
 
 def showVersion():
-    with open('../VERSION', 'r') as fp:
+    with open(f'{path.dirname(__file__)}/../VERSION', 'r') as fp:
         return '%(prog)s - Version ' + fp.readline()
 
 
 def parseArguments():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('cube_name', help='indicates the name of the cube', type=str)
-    parser.add_argument('-r', '--rule-file', help='the file containing the rules to be pushed', type=str, default=None)
-    parser.add_argument('-s', '--show-rules', help='show the rules already stored in firewall', action='store_true')
-    parser.add_argument('-e', '--egress', help='set that the rule is to be inserted in the egress chain', action='store_true')
-    parser.add_argument('-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
-    parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
-    parser.add_argument('-v', '--version', action='version', version=showVersion())
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        'cube_name', help='indicates the name of the cube', type=str)
+    parser.add_argument(
+        '-r', '--rule-file', help='the file containing the rules to be pushed', type=str, default=None)
+    parser.add_argument(
+        '-s', '--show-rules', help='show the rules already stored in firewall', action='store_true')
+    parser.add_argument(
+        '-e', '--egress', help='set that the rule is to be inserted in the egress chain', action='store_true')
+    parser.add_argument(
+        '-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
+    parser.add_argument(
+        '-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
+    parser.add_argument('-v', '--version', action='version',
+                        version=showVersion())
     args = parser.parse_args().__dict__
     if args['rule_file'] is None and args['show_rules'] is False:
         parser.error('You need to specify an action (-r / -s)')

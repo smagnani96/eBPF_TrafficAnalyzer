@@ -14,6 +14,9 @@
 #define IPPROTO_UDP 17
 #define IPPROTO_ICMP 1
 
+#define ECHO_REQUEST 8
+#define ECHO_REPLY  0
+
 /*Own control variables*/
 #define N_SESSION                   1024            // Number of max TCP session tracked
 #define N_PACKET_PER_SESSION        100             // Number of packet from the same TCP session
@@ -38,12 +41,8 @@ struct session_value {
 /*Features to be exported*/
 struct features {
     struct session_key id;                          //Session identifier
-    __be32 server_ip;                               //The server IP
     uint64_t timestamp;                             //Packet timestamp
-    uint16_t length;                                //IP length value
     uint16_t ipFlagsFrag;                           //IP flags
-    uint16_t tcpLen;                                //TCP payload length
-    uint32_t tcpAck;                                //TCP ack n°
     uint8_t tcpFlags;                               //TCP flags
     uint16_t tcpWin;                                //TCP window value
     uint8_t udpSize;                                //UDP payload length
@@ -58,7 +57,8 @@ struct eth_hdr {
 } __attribute__((packed));
 
 /*Ip Header => https://github.com/torvalds/linux/blob/master/include/uapi/linux/ip.h */
-struct iphdr {
+/*The "_" is useful if mode=XDP_SBK, since already named iphdr*/
+struct iphdr_ {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
     __u8    ihl:4,
         version:4;
@@ -143,45 +143,50 @@ struct icmphdr {
     } un;
 } __attribute__((packed));
 
-/*Structure shared between Control Plane - Data Plane*/
-BPF_QUEUESTACK("queue",PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
+#if POLYCUBE_PROGRAM_TYPE == 0 
+BPF_QUEUESTACK_SHARED("queue",PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
+BPF_TABLE_SHARED("hash", struct session_key, struct session_value, SESSIONS_TRACKED_DDOS, N_SESSION);
+#else
+BPF_QUEUESTACK("extern", PACKET_BUFFER_DDOS, struct features, N_PACKET_TOTAL, 0);
+BPF_TABLE("extern", struct session_key, struct session_value, SESSIONS_TRACKED_DDOS, N_SESSION);
+#endif
 
-/*Tracked session map*/
-BPF_TABLE("hash", struct session_key, struct session_value, SESSIONS_TRACKED_DDOS, N_SESSION);
-
-/*Method to determine which member of the communication is the server*/
-static __always_inline __be32 heuristic_server_tcp(struct iphdr *ip, struct tcphdr *tcp) {
-  /*If Syn, then srcIp is the server*/
-  if(tcp->syn) {/*If source port < 1024, then srcIp is the server*/
-    return tcp->ack? ip->saddr : ip->daddr;
+/*Method to return the session identifier, with the lower IP as first member*/
+static __always_inline struct session_key get_key(uint32_t ip_a, uint32_t ip_b, uint16_t port_a, uint16_t port_b, uint8_t proto) {
+  if(ip_a < ip_b) {
+    struct session_key ret = {.saddr=ip_a, .daddr=ip_b, .sport=port_a, .dport=port_b, .proto=proto};
+    return ret;
+  } else {
+    struct session_key ret = {.saddr=ip_b, .daddr=ip_a, .sport=port_b, .dport=port_a, .proto=proto};
+    return ret;
   }
-  uint16_t dst_port = bpf_htons(tcp->dest);
-  /*If destination port < 1024, then dstIp is the server*/
-  if(dst_port < 1024) {
-    return ip->daddr;
-  }
-  uint16_t src_port = bpf_htons(tcp->source);
-  /*If source port < 1024, then srcIp is the server*/
-  if(src_port < 1024) {
-    return ip->saddr;
-  }
-  /*Otherwise, the lowest port is the server*/
-  return dst_port <= src_port ? ip->daddr : ip->saddr;
 }
 
-static __always_inline __be32 heuristic_server_udp(struct iphdr *ip, struct udphdr *udp) {
-  /*If destination port < 1024, then dstIp is the server*/
-  uint16_t dst_port = bpf_htons(udp->dest);
-  if(dst_port < 1024) {
-    return ip->daddr;
+/*Method to determine which member of the communication is the server*/
+static __always_inline __be32 heuristic_server(uint32_t src_ip, uint32_t dst_ip, uint16_t src_port, uint16_t dst_port, struct tcphdr *tcp, struct icmphdr *icmp) {
+  /*If Syn, then srcIp is the server*/
+  if(tcp && tcp->syn) {/*If source port < 1024, then srcIp is the server*/
+    return tcp->ack? src_ip : dst_ip;
   }
-  uint16_t src_port = bpf_htons(udp->source);
+  /*Check if Echo Request/Reply*/
+  if(icmp) {
+    if(icmp->type == ECHO_REQUEST)
+      return dst_ip;
+    if(icmp->type == ECHO_REPLY)
+      return src_ip;
+  }
+  dst_port = bpf_htons(dst_port);
+  /*If destination port < 1024, then dstIp is the server*/
+  if(dst_port < 1024) {
+    return dst_ip;
+  }
+  src_port = bpf_htons(src_port);
   /*If source port < 1024, then srcIp is the server*/
   if(src_port < 1024) {
-    return ip->saddr;
+    return src_ip;
   }
   /*Otherwise, the lowest port is the server*/
-  return dst_port <= src_port ? ip->daddr : ip->saddr;
+  return dst_port <= src_port ? dst_ip : src_ip;
 }
 
 /*Default function called at each packet on interface*/
@@ -198,7 +203,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     return RX_OK;
 
   /*Parsing L3*/
-  struct iphdr *ip = data + sizeof(struct eth_hdr);
+  struct iphdr_ *ip = data + sizeof(struct eth_hdr);
   if (data + sizeof(struct eth_hdr) + sizeof(*ip) > data_end)
     return RX_OK;
   if ((int) ip->version != 4)
@@ -216,7 +221,7 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
   
   /*Checking if packed is already timestamped, otherwise get it from kernel bpf function*/
   uint64_t curr_time = pcn_get_time_epoch();
-  struct session_value zero = {0};
+  struct session_value zero = {.n_packets=0, .server_ip=0};
 
   switch (ip->protocol) {
     case IPPROTO_TCP: {
@@ -225,35 +230,28 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       if ((void *) tcp + sizeof(*tcp) > data_end) {
         return RX_OK;
       }
-
       /*Check if it is already tracked or try to track it*/
-      struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=tcp->source, .dport=tcp->dest, .proto=ip->protocol};
-      struct session_value *value = SESSIONS_TRACKED_DDOS.lookup(&key);
-      if (!value) {
-        struct session_key reverse_key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=tcp->dest, .dport=tcp->source, .proto=ip->protocol};
-        value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&reverse_key, &zero);
-        if(!value) {
-          break;
-        }
-        key = reverse_key;
+      struct session_key key = get_key(ip->saddr, ip->daddr, tcp->source, tcp->dest, ip->protocol);
+      struct session_value *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
+      if(!value) {
+        break;
       }
-      
+
       /*Check if max packet reached*/
       if(value->n_packets == N_PACKET_PER_SESSION){
         break;
       } else if(value->n_packets == 0){
-        value->server_ip = heuristic_server_tcp(ip, tcp);
+        value->server_ip = heuristic_server(ip->saddr, ip->daddr, tcp->source, tcp->dest, tcp, NULL);
       }
       value->n_packets +=1;
 
       /*Now I'm sure to take the packet*/
-      uint16_t len = bpf_ntohs(ip->tot_len);
-      struct features new_features = {.id=key, .server_ip=value->server_ip, .length=len, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off),
-        .tcpAck=tcp->ack_seq, .tcpWin=bpf_ntohs(tcp->window), .tcpLen=(uint16_t)(len - ip_header_len - sizeof(*tcp)), 
+      struct features new_features = {.id=key, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off),
+        .tcpWin=bpf_ntohs(tcp->window),
         .tcpFlags=(tcp->cwr << 7) | (tcp->ece << 6) | (tcp->urg << 5) | (tcp->ack << 4)
                 | (tcp->psh << 3)| (tcp->rst << 2) | (tcp->syn << 1) | tcp->fin};
       
-      /*Try to push those features into PACKET_BUFFER*/
+      /*Push those features into PACKET_BUFFER*/
       PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
@@ -265,30 +263,24 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
 
       /*Check if it is already tracked or try to track it*/
-      struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=0, .dport=0, .proto=ip->protocol};
+      struct session_key key = get_key(ip->saddr, ip->daddr, 0, 0, ip->protocol);
       struct session_value *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
-      if (!value) {
-        struct session_key reverse_key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=0, .dport=0, .proto=ip->protocol};
-        value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&reverse_key, &zero);
-        if(!value) {
-          break;
-        }
-        key = reverse_key;
+      if(!value) {
+        break;
       }
-      
+
       /*Check if max packet reached*/
       if(value->n_packets == N_PACKET_PER_SESSION){
         break;
       } else if(value->n_packets == 0){
-        value->server_ip = ip->daddr;
+        value->server_ip = heuristic_server(ip->saddr, ip->daddr, 0, 0, NULL, icmp);
       }
-      value->n_packets +=1;  
-      
+      value->n_packets +=1;
+
       /*Now I'm sure to take the packet*/
-      struct features new_features = {.id=key, .server_ip=value->server_ip, .length=bpf_ntohs(ip->tot_len), .icmpType=icmp->type,
-        .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
+      struct features new_features = {.id=key, .icmpType=icmp->type, .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      /*Try to push those features into PACKET_BUFFER*/
+      /*Push those features into PACKET_BUFFER*/
       PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
@@ -300,30 +292,24 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
       }
 
       /*Check if it is already tracked or try to track it*/
-      struct session_key key = {.saddr=ip->saddr, .daddr=ip->daddr, .sport=udp->source, .dport=udp->dest, .proto=ip->protocol};
+      struct session_key key = get_key(ip->saddr, ip->daddr, udp->source, udp->dest, ip->protocol);
       struct session_value *value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&key, &zero);
-      if (!value) {
-        struct session_key reverse_key = {.saddr=ip->daddr, .daddr=ip->saddr, .sport=udp->dest, .dport=udp->source, .proto=ip->protocol};
-        value = SESSIONS_TRACKED_DDOS.lookup_or_try_init(&reverse_key, &zero);
-        if(!value) {
-          break;
-        }
-        key = reverse_key;
+      if(!value) {
+        break;
       }
 
       /*Check if max packet reached*/
       if(value->n_packets == N_PACKET_PER_SESSION){
         break;
       } else if(value->n_packets == 0){
-        value->server_ip = heuristic_server_udp(ip, udp);
+        value->server_ip = heuristic_server(ip->saddr, ip->daddr, udp->source, udp->dest, NULL, NULL);
       }
-      value->n_packets +=1;  
-      
+      value->n_packets +=1;
+
       /*Now I'm sure to take the packet*/
-      struct features new_features = {.id=key, .server_ip=value->server_ip, .length=bpf_ntohs(ip->tot_len), .udpSize=bpf_ntohs(udp->len) - sizeof(*udp),
-        .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
+      struct features new_features = {.id=key, .udpSize=bpf_ntohs(udp->len) - sizeof(*udp), .timestamp=curr_time, .ipFlagsFrag=bpf_ntohs(ip->frag_off)};
       
-      /*Try to push those features into PACKET_BUFFER*/
+      /*Push those features into PACKET_BUFFER*/
       PACKET_BUFFER_DDOS.push(&new_features, 0);
       break;
     }
@@ -333,6 +319,5 @@ static __always_inline int handle_rx(struct CTXTYPE *ctx, struct pkt_metadata *m
     }
   }
 
-  /* pcn_log(ctx, LOG_TRACE, "Successfully captured packet") */
   return RX_OK;
 }

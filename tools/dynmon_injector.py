@@ -10,8 +10,9 @@ from os import path
 
 POLYCUBED_ADDR = 'localhost'
 POLYCUBED_PORT = 9000
-REQUESTS_TIMEOUT = 5 #seconds
+REQUESTS_TIMEOUT = 20  # seconds
 MODE = 'TC'
+DIRECTION = 'both'
 
 polycubed_endpoint = 'http://{}:{}/polycube/v1'
 
@@ -28,6 +29,7 @@ def main():
     path_to_dataplane = args['path_to_configuration']
     debug = args['debug']
     mode = args['mode']
+    direction = args['type']
 
     dataplane = None
 
@@ -37,6 +39,11 @@ def main():
     else:
         with open(path_to_dataplane) as json_file:
             dataplane = json.load(json_file)
+
+    if direction == 'ingress':
+        dataplane['egress-path'] = {}
+    if direction == 'egress':
+        dataplane['ingress-path'] = {}
 
     polycubed_endpoint = polycubed_endpoint.format(addr, port)
 
@@ -61,7 +68,8 @@ def main():
 
 def checkIfServiceExists(cube_name):
     try:
-        response = requests.get(f'{polycubed_endpoint}/dynmon/{cube_name}', timeout=REQUESTS_TIMEOUT)
+        response = requests.get(
+            f'{polycubed_endpoint}/dynmon/{cube_name}', timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
         return True, json.loads(response.content)
     except requests.exceptions.HTTPError:
@@ -102,10 +110,10 @@ def createInstance(cube_name, dataplane, debug, mode):
     try:
         print(f'Creating new dynmon instance named {cube_name}')
         response = requests.post(f'{polycubed_endpoint}/dynmon/{cube_name}',
-                                json.dumps({'dataplane-config': dataplane,
-                                    'type': mode,
-                                    'loglevel': 'debug' if debug is True else 'info'}),
-                                timeout=REQUESTS_TIMEOUT)
+                                 json.dumps({'dataplane-config': dataplane,
+                                             'type': mode,
+                                             'loglevel': 'debug' if debug is True else 'OFF'}),
+                                 timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
     except requests.exceptions.HTTPError:
         print(f'Error: {response.content.decode("UTF-8")}')
@@ -125,7 +133,8 @@ def detach_from_interface(cube_name, interface):
     try:
         print(f'Detaching {cube_name} from {interface}')
         response = requests.post(f'{polycubed_endpoint}/detach',
-                                 json.dumps({'cube': cube_name, 'port': interface}),
+                                 json.dumps(
+                                     {'cube': cube_name, 'port': interface}),
                                  timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
     except requests.exceptions.HTTPError:
@@ -146,7 +155,8 @@ def attach_to_interface(cube_name, interface):
     try:
         print(f'Attaching {cube_name} to {interface}')
         response = requests.post(f'{polycubed_endpoint}/attach',
-                                 json.dumps({'cube': cube_name, 'port': interface, 'position': 'first'}),
+                                 json.dumps(
+                                     {'cube': cube_name, 'port': interface, 'position': 'last'}),
                                  timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
     except requests.exceptions.HTTPError:
@@ -164,23 +174,33 @@ def attach_to_interface(cube_name, interface):
 
 
 def showVersion():
-    with open('../VERSION', 'r') as fp:
+    with open(f'{path.dirname(__file__)}/../VERSION', 'r') as fp:
         return '%(prog)s - Version ' + fp.readline()
 
 
 def parseArguments():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('cube_name', help='indicates the name of the cube', type=str)
-    parser.add_argument('peer_interface', help='indicates the network interface to connect the cube to', type=str)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        'cube_name', help='indicates the name of the cube', type=str)
+    parser.add_argument(
+        'peer_interface', help='indicates the network interface to connect the cube to', type=str)
     parser.add_argument('path_to_configuration',
                         help='''indicates the path to the json file which contains the new dataplane configuration
                                 which contains the new dataplane code and the metadata associated to the exported metrics''',
                         type=str)
-    parser.add_argument('-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
-    parser.add_argument('-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
-    parser.add_argument('-m', '--mode', help='set the probe injected program mode (TC / XDP_SKB / XDP_DRV)', type=str, default=MODE)
-    parser.add_argument('-d', '--debug', help='set the probe log level debug', action='store_true')
-    parser.add_argument('-v', '--version', action='version', version=showVersion())
+    parser.add_argument(
+        '-a', '--address', help='set the polycube daemon ip address', type=str, default=POLYCUBED_ADDR)
+    parser.add_argument(
+        '-p', '--port', help='set the polycube daemon port', type=int, default=POLYCUBED_PORT)
+    parser.add_argument(
+        '-t', '--type', help='set the packets\' directions to inject the program (ingress, egress, both)', type=str, default=DIRECTION)
+    parser.add_argument(
+        '-m', '--mode', help='set the probe mode (TC / XDP_SKB / XDP_DRV)', type=str, default=MODE)
+    parser.add_argument(
+        '-d', '--debug', help='set the probe log level debug', action='store_true')
+    parser.add_argument('-v', '--version', action='version',
+                        version=showVersion())
     return parser.parse_args().__dict__
 
 

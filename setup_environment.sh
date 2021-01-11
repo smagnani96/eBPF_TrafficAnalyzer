@@ -2,21 +2,13 @@
 set -x
 
 # Set online=1 in case the probe is directly involved in switching the packets (the interface receives both incoming and outgoing packets)
-online=1
+online=0
 interface="wlp59s0"
 firewall="fw"
 dynmon_ddos="monitor_ddos"
 dynmon_crypto="monitor_crypto"
-
-if [ $online -eq 0 ]
-then
-	path_ddos_config="./src/offline/ddos_detection/dataplane.json"
-	path_crypto_config="./src/offline/crypto_mining/dataplane.json"
-else
-	path_ddos_config="./src/online/ddos_detection/dataplane.json"
-	path_crypto_config="./src/online/crypto_mining/dataplane.json"
-fi
-
+path_ddos_config="./src/ddos_detection/dataplane.json"
+path_crypto_config="./src/crypto_mining/dataplane.json"
 
 ret=$(docker container ls | grep "s41m0n/polycube:toshi")
 if [ $? -eq 0 ]
@@ -30,13 +22,22 @@ else
 	sleep 8
 fi
 
-echo "Creating Dynmon for DDos detection"
-./tools/dynmon_injector.py $dynmon_ddos $interface $path_ddos_config
 
-echo "Creating Dynmon for Crypto detection"
-./tools/dynmon_injector.py $dynmon_crypto $interface $path_crypto_config
+
+if [ $online -eq 1 ];
+then
+	online="both"
+else
+	online="ingress"
+fi
 
 echo "Creating Firewall instance"
-./tools/firewall_injector.py $firewall $interface
+./tools/firewall_injector.py $firewall $interface -d
+
+echo "Creating Dynmon for DDos detection"
+./tools/dynmon_injector.py $dynmon_ddos $interface $path_ddos_config -t $online -d
+
+echo "Creating Dynmon for Crypto detection"
+./tools/dynmon_injector.py $dynmon_crypto $interface $path_crypto_config -t $online -d
 
 echo "Your environment is ready to be used :)"
